@@ -1,6 +1,17 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.detekt)
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom(rootProject.file("config/detekt/detekt.yml"))
+}
+
+tasks.named("check") {
+    setDependsOn(dependsOn.filterNot { it is TaskProvider<*> && it.name == "detekt" })
+    dependsOn("detektMain", "detektTest")
 }
 
 android {
