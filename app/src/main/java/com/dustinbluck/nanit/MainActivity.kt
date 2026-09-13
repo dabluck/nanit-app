@@ -4,13 +4,16 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.ui.NavDisplay
 import com.dustinbluck.nanit.ui.theme.NanitTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,29 +22,18 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             NanitTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                val backStack = remember { mutableStateListOf<Screen>(Screen.Main) }
+                NavDisplay(backStack = backStack, onBack = { backStack.removeLastOrNull() }) { key ->
+                    NavEntry(key) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            when (key) {
+                                Screen.Main -> Button(onClick = { backStack.add(Screen.Birthday) }) { Text("Birthday") }
+                                Screen.Birthday -> Text("Birthday")
+                            }
+                        }
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    NanitTheme {
-        Greeting("Android")
     }
 }
