@@ -1,7 +1,7 @@
 package com.dustinbluck.nanit.ui.theme
 
 import android.os.Build
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -21,7 +21,7 @@ fun NanitTheme(content: @Composable () -> Unit) {
         LightColorScheme
     }
 
-    MaterialTheme(
+    MaterialExpressiveTheme(
         colorScheme = colorScheme,
         typography = Typography,
         content = content
