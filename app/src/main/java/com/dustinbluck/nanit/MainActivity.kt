@@ -1,35 +1,66 @@
 package com.dustinbluck.nanit
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import com.dustinbluck.nanit.ui.birthday.BirthdayScreen
+import com.dustinbluck.nanit.ui.main.MainScreen
 import com.dustinbluck.nanit.ui.theme.NanitTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                Color.TRANSPARENT,
+                Color.TRANSPARENT
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                Color.TRANSPARENT,
+                Color.TRANSPARENT
+            )
+        )
         setContent {
             NanitTheme {
-                val backStack = remember { mutableStateListOf<Screen>(Screen.Main) }
-                NavDisplay(backStack = backStack, onBack = { backStack.removeLastOrNull() }) { key ->
+                val backStack = remember {
+                    mutableStateListOf<Screen>(Screen.Main)
+                }
+                NavDisplay(
+                    backStack = backStack,
+                    onBack = {
+                        backStack.removeLastOrNull()
+                    },
+                    transitionSpec = {
+                        fadeIn() togetherWith ExitTransition.KeepUntilTransitionsFinished
+                    },
+                    popTransitionSpec = {
+                        EnterTransition.None togetherWith fadeOut()
+                    },
+                    predictivePopTransitionSpec = {
+                        EnterTransition.None togetherWith fadeOut()
+                    }
+                ) { key ->
                     NavEntry(key) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            when (key) {
-                                Screen.Main -> Button(onClick = { backStack.add(Screen.Birthday) }) { Text("Birthday") }
-                                Screen.Birthday -> Text("Birthday")
-                            }
+                        when (key) {
+                            Screen.Main -> MainScreen(
+                                onBirthdayClick = {
+                                    backStack.add(Screen.Birthday)
+                                }
+                            )
+
+                            Screen.Birthday -> BirthdayScreen()
                         }
                     }
                 }
