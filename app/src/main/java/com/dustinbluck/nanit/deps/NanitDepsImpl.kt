@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.dustinbluck.nanit.data.BabyRepository
 import com.dustinbluck.nanit.data.PreferencesBabyRepository
+import com.dustinbluck.nanit.logging.AndroidLogger
+import com.dustinbluck.nanit.logging.Logger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 
@@ -31,6 +33,10 @@ class NanitDepsImpl(
             photoDirectory = application.filesDir.resolve(BABY_PHOTO_DIRECTORY_NAME),
             ioDispatcher = ioDispatcher
         )
+    }
+
+    override val logger: Logger by lazy {
+        AndroidLogger()
     }
 
     private companion object {
