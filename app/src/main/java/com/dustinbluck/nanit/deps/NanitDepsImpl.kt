@@ -30,7 +30,9 @@ class NanitDepsImpl(
     override val babyRepository: BabyRepository by lazy {
         PreferencesBabyRepository(
             dataStore = babyDataStore,
-            photoDirectory = application.filesDir.resolve(BABY_PHOTO_DIRECTORY_NAME),
+            producePhotoDirectory = {
+                application.filesDir.resolve(BABY_PHOTO_DIRECTORY_NAME)
+            },
             ioDispatcher = ioDispatcher
         )
     }

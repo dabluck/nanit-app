@@ -39,7 +39,9 @@ internal class PreferencesBabyRepositoryTest {
         )
         subject = PreferencesBabyRepository(
             dataStore = dataStore,
-            photoDirectory = photoDirectory,
+            producePhotoDirectory = {
+                photoDirectory
+            },
             ioDispatcher = UnconfinedTestDispatcher()
         )
     }

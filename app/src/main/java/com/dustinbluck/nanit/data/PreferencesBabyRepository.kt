@@ -20,9 +20,13 @@ import java.util.UUID
 
 class PreferencesBabyRepository(
     private val dataStore: DataStore<Preferences>,
-    private val photoDirectory: File,
+    private val producePhotoDirectory: () -> File,
     private val ioDispatcher: CoroutineDispatcher
 ) : BabyRepository {
+
+    private val photoDirectory: File by lazy {
+        producePhotoDirectory()
+    }
 
     override val baby: Flow<Baby> = dataStore.data
         .map { preferences ->
