@@ -1,10 +1,12 @@
 package com.dustinbluck.nanit.deps
 
+import android.net.Uri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.dustinbluck.nanit.data.BabyRepository
 import com.dustinbluck.nanit.data.FailingBabyRepository
+import com.dustinbluck.nanit.data.PhotoManager
 import com.dustinbluck.nanit.data.PreferencesBabyRepository
 import com.dustinbluck.nanit.logging.FakeLogger
 import kotlinx.coroutines.CoroutineDispatcher
@@ -33,6 +35,12 @@ internal class TestDependencyFactory(
         )
     }
 
+    fun cameraPhotoFile(): File {
+        return root
+            .resolve(CAMERA_PHOTO_DIRECTORY_NAME)
+            .resolve(CAMERA_PHOTO_FILE_NAME)
+    }
+
     fun babyDataStore(
         file: File = babyDataStoreFile(),
         scope: CoroutineScope = testScope.backgroundScope
@@ -47,13 +55,13 @@ internal class TestDependencyFactory(
 
     fun babyRepository(
         dataStore: DataStore<Preferences> = babyDataStore(),
-        photoDirectory: File = babyPhotoDirectory(),
+        filesDirectory: File = root,
         ioDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(testScope.testScheduler)
     ): PreferencesBabyRepository {
         return PreferencesBabyRepository(
             dataStore = dataStore,
-            producePhotoDirectory = {
-                photoDirectory
+            produceFilesDirectory = {
+                filesDirectory
             },
             ioDispatcher = ioDispatcher
         )
@@ -63,6 +71,15 @@ internal class TestDependencyFactory(
         return FailingBabyRepository(delegate)
     }
 
+    fun photoManager(cacheDirectory: File = root): PhotoManager {
+        return PhotoManager(
+            produceCacheDirectory = {
+                cacheDirectory
+            },
+            uriForFile = Uri::fromFile
+        )
+    }
+
     fun logger(): FakeLogger {
         return FakeLogger()
     }
@@ -70,5 +87,7 @@ internal class TestDependencyFactory(
     private companion object {
         private const val BABY_DATA_STORE_FILE_NAME = "baby.preferences_pb"
         private const val BABY_PHOTO_DIRECTORY_NAME = "baby_photo"
+        private const val CAMERA_PHOTO_DIRECTORY_NAME = "camera_photo"
+        private const val CAMERA_PHOTO_FILE_NAME = "photo.jpg"
     }
 }

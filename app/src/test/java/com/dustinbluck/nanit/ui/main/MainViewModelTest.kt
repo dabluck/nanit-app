@@ -356,6 +356,137 @@ internal class MainViewModelTest {
         assertThat(entry.level).isEqualTo(FakeLogger.Level.ERROR)
     }
 
+    @Test
+    fun editPhotoOpensPhotoEdit() = testScope.runTest {
+        subject.editPhoto()
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
+            EditState.Open(
+                field = EditField.PHOTO,
+                isSaving = false,
+                saveFailed = false
+            )
+        )
+    }
+
+    @Test
+    fun savePhotoStoresPhoto() = testScope.runTest {
+        subject.editPhoto()
+        subject.savePhoto(PHOTO::inputStream)
+
+        val photo = babyRepository.baby.first().photo
+
+        assertThat(photo?.readBytes()).isEqualTo(PHOTO)
+    }
+
+    @Test
+    fun savePhotoClosesEdit() = testScope.runTest {
+        subject.editPhoto()
+        subject.savePhoto(PHOTO::inputStream)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
+    }
+
+    @Test
+    fun savePhotoStoresPhotoWhenEditIsClosed() = testScope.runTest {
+        subject.savePhoto(PHOTO::inputStream)
+
+        val photo = babyRepository.baby.first().photo
+
+        assertThat(photo?.readBytes()).isEqualTo(PHOTO)
+    }
+
+    @Test
+    fun savePhotoIsIgnoredWhenNameEditIsOpen() = testScope.runTest {
+        subject.editName()
+        subject.savePhoto(PHOTO::inputStream)
+
+        val baby = babyRepository.baby.first()
+
+        assertThat(baby.photo).isNull()
+    }
+
+    @Test
+    fun savePhotoFromCameraStoresPhoto() = testScope.runTest {
+        val photoManager = factory.photoManager()
+        photoManager.prepareCameraPhoto()
+        factory.cameraPhotoFile().writeBytes(PHOTO)
+        subject.editPhoto()
+        subject.savePhoto(photoManager::openCameraPhoto)
+
+        val photo = babyRepository.baby.first().photo
+
+        assertThat(photo?.readBytes()).isEqualTo(PHOTO)
+    }
+
+    @Test
+    fun savePhotoFromCameraFailsWhenCameraWroteNoPhoto() = testScope.runTest {
+        val photoManager = factory.photoManager()
+        photoManager.prepareCameraPhoto()
+        factory.cameraPhotoFile().writeBytes(PHOTO)
+        photoManager.prepareCameraPhoto()
+        subject.editPhoto()
+        subject.savePhoto(photoManager::openCameraPhoto)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
+            EditState.Open(
+                field = EditField.PHOTO,
+                isSaving = false,
+                saveFailed = true
+            )
+        )
+    }
+
+    @Test
+    fun failedSavePhotoKeepsPhotoEditOpenWithError() = testScope.runTest {
+        subject = createSubject(factory.failingBabyRepository(babyRepository))
+        subject.editPhoto()
+        subject.savePhoto(PHOTO::inputStream)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
+            EditState.Open(
+                field = EditField.PHOTO,
+                isSaving = false,
+                saveFailed = true
+            )
+        )
+    }
+
+    @Test
+    fun failedSavePhotoWhenEditIsClosedOpensPhotoEditWithError() = testScope.runTest {
+        subject = createSubject(factory.failingBabyRepository(babyRepository))
+        subject.savePhoto(PHOTO::inputStream)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
+            EditState.Open(
+                field = EditField.PHOTO,
+                isSaving = false,
+                saveFailed = true
+            )
+        )
+    }
+
+    @Test
+    fun failedSavePhotoIsLogged() = testScope.runTest {
+        subject = createSubject(factory.failingBabyRepository(babyRepository))
+        subject.editPhoto()
+        subject.savePhoto(PHOTO::inputStream)
+
+        val entry = logger.entries.single()
+
+        assertThat(entry.level).isEqualTo(FakeLogger.Level.ERROR)
+    }
+
     private fun createSubject(repository: BabyRepository): MainViewModel {
         return MainViewModel(
             babyRepository = repository,
@@ -378,6 +509,11 @@ internal class MainViewModelTest {
             2025,
             3,
             14
+        )
+        private val PHOTO = byteArrayOf(
+            1,
+            2,
+            3
         )
     }
 }

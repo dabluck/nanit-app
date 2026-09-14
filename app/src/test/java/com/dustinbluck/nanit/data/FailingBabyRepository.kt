@@ -12,7 +12,7 @@ internal class FailingBabyRepository(delegate: BabyRepository) : BabyRepository 
         return false
     }
 
-    override suspend fun setPhoto(photo: InputStream): Boolean {
+    override suspend fun setPhoto(openPhoto: () -> InputStream): Boolean {
         return false
     }
 }

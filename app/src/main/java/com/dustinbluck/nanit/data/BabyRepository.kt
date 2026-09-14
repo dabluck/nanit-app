@@ -11,5 +11,5 @@ interface BabyRepository {
 
     suspend fun setBirthday(birthday: LocalDate): Boolean
 
-    suspend fun setPhoto(photo: InputStream): Boolean
+    suspend fun setPhoto(openPhoto: () -> InputStream): Boolean
 }

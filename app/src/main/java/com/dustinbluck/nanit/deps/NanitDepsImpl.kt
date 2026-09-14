@@ -4,8 +4,10 @@ import android.app.Application
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.core.content.FileProvider
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.dustinbluck.nanit.data.BabyRepository
+import com.dustinbluck.nanit.data.PhotoManager
 import com.dustinbluck.nanit.data.PreferencesBabyRepository
 import com.dustinbluck.nanit.logging.AndroidLogger
 import com.dustinbluck.nanit.logging.Logger
@@ -30,10 +32,25 @@ class NanitDepsImpl(
     override val babyRepository: BabyRepository by lazy {
         PreferencesBabyRepository(
             dataStore = babyDataStore,
-            producePhotoDirectory = {
-                application.filesDir.resolve(BABY_PHOTO_DIRECTORY_NAME)
+            produceFilesDirectory = {
+                application.filesDir
             },
             ioDispatcher = ioDispatcher
+        )
+    }
+
+    override val photoManager: PhotoManager by lazy {
+        PhotoManager(
+            produceCacheDirectory = {
+                application.cacheDir
+            },
+            uriForFile = { file ->
+                FileProvider.getUriForFile(
+                    application,
+                    application.packageName + CAMERA_PHOTO_AUTHORITY_SUFFIX,
+                    file
+                )
+            }
         )
     }
 
@@ -43,6 +60,6 @@ class NanitDepsImpl(
 
     private companion object {
         private const val BABY_DATA_STORE_NAME = "baby"
-        private const val BABY_PHOTO_DIRECTORY_NAME = "baby_photo"
+        private const val CAMERA_PHOTO_AUTHORITY_SUFFIX = ".cameraphoto"
     }
 }

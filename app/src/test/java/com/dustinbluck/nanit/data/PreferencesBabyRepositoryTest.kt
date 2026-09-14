@@ -10,6 +10,8 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
+import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.time.LocalDate
@@ -78,7 +80,7 @@ internal class PreferencesBabyRepositoryTest {
 
     @Test
     fun setPhotoStoresPhotoBytes() = testScope.runTest {
-        subject.setPhoto(PHOTO.inputStream())
+        subject.setPhoto(PHOTO::inputStream)
 
         val photo = subject.baby.first().photo
 
@@ -87,8 +89,8 @@ internal class PreferencesBabyRepositoryTest {
 
     @Test
     fun setPhotoDeletesPreviousPhoto() = testScope.runTest {
-        subject.setPhoto(PHOTO.inputStream())
-        subject.setPhoto(OTHER_PHOTO.inputStream())
+        subject.setPhoto(PHOTO::inputStream)
+        subject.setPhoto(OTHER_PHOTO::inputStream)
 
         val photo = subject.baby.first().photo
 
@@ -97,7 +99,7 @@ internal class PreferencesBabyRepositoryTest {
 
     @Test
     fun photoIsNullWhenPhotoFileIsMissing() = testScope.runTest {
-        subject.setPhoto(PHOTO.inputStream())
+        subject.setPhoto(PHOTO::inputStream)
         factory.babyPhotoDirectory().deleteRecursively()
 
         val baby = subject.baby.first()
@@ -121,22 +123,58 @@ internal class PreferencesBabyRepositoryTest {
 
     @Test
     fun setPhotoReturnsTrue() = testScope.runTest {
-        val result = subject.setPhoto(PHOTO.inputStream())
+        val result = subject.setPhoto(PHOTO::inputStream)
 
         assertThat(result).isTrue()
     }
 
     @Test
     fun setPhotoReturnsFalseWhenPhotoCannotBeRead() = testScope.runTest {
-        val result = subject.setPhoto(FAILING_PHOTO)
+        val result = subject.setPhoto(::FailingInputStream)
 
         assertThat(result).isFalse()
     }
 
     @Test
+    fun setPhotoReturnsFalseWhenPhotoFileIsMissing() = testScope.runTest {
+        val missingPhoto = File(
+            folder.root,
+            MISSING_PHOTO_FILE_NAME
+        )
+
+        val result = subject.setPhoto(missingPhoto::inputStream)
+
+        assertThat(result).isFalse()
+    }
+
+    @Test
+    fun setPhotoClosesPhoto() = testScope.runTest {
+        val photo = TrackingInputStream(PHOTO.inputStream())
+        subject.setPhoto {
+            photo
+        }
+
+        val isClosed = photo.isClosed
+
+        assertThat(isClosed).isTrue()
+    }
+
+    @Test
+    fun failedSetPhotoClosesPhoto() = testScope.runTest {
+        val photo = TrackingInputStream(FailingInputStream())
+        subject.setPhoto {
+            photo
+        }
+
+        val isClosed = photo.isClosed
+
+        assertThat(isClosed).isTrue()
+    }
+
+    @Test
     fun failedSetPhotoKeepsPreviousPhoto() = testScope.runTest {
-        subject.setPhoto(PHOTO.inputStream())
-        subject.setPhoto(FAILING_PHOTO)
+        subject.setPhoto(PHOTO::inputStream)
+        subject.setPhoto(::FailingInputStream)
 
         val photo = subject.baby.first().photo
 
@@ -145,7 +183,7 @@ internal class PreferencesBabyRepositoryTest {
 
     @Test
     fun failedSetPhotoDeletesPartialPhoto() = testScope.runTest {
-        subject.setPhoto(FAILING_PHOTO)
+        subject.setPhoto(::FailingInputStream)
 
         val photos = factory.babyPhotoDirectory().list()
 
@@ -171,12 +209,12 @@ internal class PreferencesBabyRepositoryTest {
 
     @Test
     fun babyEmitsWhenPhotoIsReplaced() = testScope.runTest {
-        subject.setPhoto(PHOTO.inputStream())
+        subject.setPhoto(PHOTO::inputStream)
 
         subject.baby.test {
             skipItems(1)
 
-            subject.setPhoto(OTHER_PHOTO.inputStream())
+            subject.setPhoto(OTHER_PHOTO::inputStream)
 
             assertThat(awaitItem().photo?.readBytes()).isEqualTo(OTHER_PHOTO)
         }
@@ -185,6 +223,7 @@ internal class PreferencesBabyRepositoryTest {
     private companion object {
         private const val NAME = "Dustin"
         private const val READ_FAILURE_MESSAGE = "read failed"
+        private const val MISSING_PHOTO_FILE_NAME = "missing_photo.jpg"
         private val BIRTHDAY = LocalDate.of(
             2025,
             3,
@@ -200,10 +239,21 @@ internal class PreferencesBabyRepositoryTest {
             5,
             6
         )
-        private val FAILING_PHOTO = object : InputStream() {
-            override fun read(): Int {
-                throw IOException(READ_FAILURE_MESSAGE)
-            }
+    }
+
+    private class FailingInputStream : InputStream() {
+        override fun read(): Int {
+            throw IOException(READ_FAILURE_MESSAGE)
+        }
+    }
+
+    private class TrackingInputStream(photo: InputStream) : FilterInputStream(photo) {
+        var isClosed = false
+            private set
+
+        override fun close() {
+            isClosed = true
+            super.close()
         }
     }
 }

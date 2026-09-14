@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.InputStream
 import java.time.LocalDate
 
 class MainViewModel(
@@ -53,6 +54,10 @@ class MainViewModel(
         edit(EditField.BIRTHDAY)
     }
 
+    fun editPhoto() {
+        edit(EditField.PHOTO)
+    }
+
     fun cancelEdit() {
         editState.value = EditState.Closed
     }
@@ -75,6 +80,18 @@ class MainViewModel(
             errorLogMessage = BIRTHDAY_SAVE_ERROR_LOG_MESSAGE
         ) {
             babyRepository.setBirthday(birthday)
+        }
+    }
+
+    fun savePhoto(openPhoto: () -> InputStream) {
+        if (editState.value == EditState.Closed) {
+            edit(EditField.PHOTO)
+        }
+        save(
+            field = EditField.PHOTO,
+            errorLogMessage = PHOTO_SAVE_ERROR_LOG_MESSAGE
+        ) {
+            babyRepository.setPhoto(openPhoto)
         }
     }
 
@@ -126,5 +143,6 @@ class MainViewModel(
         private const val LOAD_ERROR_LOG_MESSAGE = "Failed to load baby"
         private const val NAME_SAVE_ERROR_LOG_MESSAGE = "Failed to save baby name"
         private const val BIRTHDAY_SAVE_ERROR_LOG_MESSAGE = "Failed to save baby birthday"
+        private const val PHOTO_SAVE_ERROR_LOG_MESSAGE = "Failed to save baby photo"
     }
 }

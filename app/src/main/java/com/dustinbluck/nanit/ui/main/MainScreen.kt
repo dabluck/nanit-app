@@ -1,6 +1,11 @@
 package com.dustinbluck.nanit.ui.main
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.provider.MediaStore
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,18 +22,24 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -48,6 +59,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -58,7 +70,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.dustinbluck.nanit.R
 import com.dustinbluck.nanit.data.Baby
+import com.dustinbluck.nanit.data.PhotoManager
 import com.dustinbluck.nanit.deps.NanitDeps
+import java.io.FileNotFoundException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -72,9 +86,30 @@ fun MainScreen(
             babyRepository = NanitDeps.instance.babyRepository,
             logger = NanitDeps.instance.logger
         )
-    }
+    },
+    photoManager: PhotoManager = NanitDeps.instance.photoManager
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val contentResolver = context.applicationContext.contentResolver
+    val canTakePhoto = remember(context) {
+        Intent(MediaStore.ACTION_IMAGE_CAPTURE).resolveActivity(context.packageManager) != null
+    }
+    val choosePhotoLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            if (uri != null) {
+                viewModel.savePhoto {
+                    contentResolver.openInputStream(uri)
+                        ?: throw FileNotFoundException(uri.toString())
+                }
+            }
+        }
+    val takePhotoLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { isPhotoTaken ->
+            if (isPhotoTaken) {
+                viewModel.savePhoto(photoManager::openCameraPhoto)
+            }
+        }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -116,6 +151,7 @@ fun MainScreen(
                     isBirthdayEnabled = state.isBirthdayEnabled,
                     onEditNameClick = viewModel::editName,
                     onEditBirthdayClick = viewModel::editBirthday,
+                    onEditPhotoClick = viewModel::editPhoto,
                     onBirthdayClick = onBirthdayClick,
                     modifier = Modifier
                         .fillMaxSize()
@@ -137,6 +173,23 @@ fun MainScreen(
                             onSave = viewModel::saveBirthday,
                             onDismiss = viewModel::cancelEdit
                         )
+
+                        EditField.PHOTO -> EditPhotoSheet(
+                            editState = editState,
+                            canTakePhoto = canTakePhoto,
+                            onChoosePhotoClick = {
+                                choosePhotoLauncher.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            },
+                            onTakePhotoClick = {
+                                photoManager.prepareCameraPhoto()
+                                takePhotoLauncher.launch(photoManager.cameraPhotoUri)
+                            },
+                            onDismiss = viewModel::cancelEdit
+                        )
                     }
                 }
             }
@@ -151,6 +204,7 @@ private fun BabyDetails(
     isBirthdayEnabled: Boolean,
     onEditNameClick: () -> Unit,
     onEditBirthdayClick: () -> Unit,
+    onEditPhotoClick: () -> Unit,
     onBirthdayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -167,19 +221,30 @@ private fun BabyDetails(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        AsyncImage(
-            model = baby.photo,
-            contentDescription = if (baby.photo == null) {
-                null
-            } else {
-                stringResource(R.string.baby_photo)
-            },
-            modifier = Modifier
-                .size(200.dp)
-                .clip(MaterialShapes.Cookie9Sided.toShape())
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentScale = ContentScale.Crop
-        )
+        Box {
+            AsyncImage(
+                model = baby.photo,
+                contentDescription = if (baby.photo == null) {
+                    null
+                } else {
+                    stringResource(R.string.baby_photo)
+                },
+                modifier = Modifier
+                    .size(200.dp)
+                    .clip(MaterialShapes.Cookie9Sided.toShape())
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentScale = ContentScale.Crop
+            )
+            FilledTonalIconButton(
+                onClick = onEditPhotoClick,
+                modifier = Modifier.align(Alignment.BottomEnd)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_edit),
+                    contentDescription = stringResource(R.string.edit_photo)
+                )
+            }
+        }
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.extraLarge
@@ -359,6 +424,60 @@ private fun EditBirthdayDialog(
             Text(
                 text = stringResource(R.string.birthday_save_error),
                 modifier = Modifier.padding(horizontal = 24.dp),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditPhotoSheet(
+    editState: EditState.Open,
+    canTakePhoto: Boolean,
+    onChoosePhotoClick: () -> Unit,
+    onTakePhotoClick: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val listItemColors =
+        ListItemDefaults.colors(containerColor = BottomSheetDefaults.ContainerColor)
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        ListItem(
+            onClick = onChoosePhotoClick,
+            enabled = !editState.isSaving,
+            leadingContent = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_photo_library),
+                    contentDescription = null
+                )
+            },
+            colors = listItemColors
+        ) {
+            Text(stringResource(R.string.choose_photo))
+        }
+        if (canTakePhoto) {
+            ListItem(
+                onClick = onTakePhotoClick,
+                enabled = !editState.isSaving,
+                leadingContent = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_photo_camera),
+                        contentDescription = null
+                    )
+                },
+                colors = listItemColors
+            ) {
+                Text(stringResource(R.string.take_photo))
+            }
+        }
+        if (editState.saveFailed) {
+            Text(
+                text = stringResource(R.string.photo_save_error),
+                modifier = Modifier.padding(
+                    horizontal = 16.dp,
+                    vertical = 8.dp
+                ),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium
             )

@@ -12,4 +12,8 @@
     <string name="name_save_error">Couldn\'t save name</string>
     <string name="edit_birthday">Edit birthday</string>
     <string name="birthday_save_error">Couldn\'t save birthday</string>
+    <string name="edit_photo">Edit photo</string>
+    <string name="choose_photo">Choose from gallery</string>
+    <string name="take_photo">Take photo</string>
+    <string name="photo_save_error">Couldn\'t save photo</string>
 </resources>

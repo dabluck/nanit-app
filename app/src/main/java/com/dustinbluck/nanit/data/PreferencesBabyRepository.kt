@@ -20,12 +20,12 @@ import java.util.UUID
 
 class PreferencesBabyRepository(
     private val dataStore: DataStore<Preferences>,
-    private val producePhotoDirectory: () -> File,
+    private val produceFilesDirectory: () -> File,
     private val ioDispatcher: CoroutineDispatcher
 ) : BabyRepository {
 
     private val photoDirectory: File by lazy {
-        producePhotoDirectory()
+        produceFilesDirectory().resolve(PHOTO_DIRECTORY_NAME)
     }
 
     override val baby: Flow<Baby> = dataStore.data
@@ -51,16 +51,18 @@ class PreferencesBabyRepository(
         }
     }
 
-    override suspend fun setPhoto(photo: InputStream): Boolean {
+    override suspend fun setPhoto(openPhoto: () -> InputStream): Boolean {
         return withContext(ioDispatcher) {
             val file = File(
                 photoDirectory,
                 UUID.randomUUID().toString()
             )
             try {
-                photoDirectory.mkdirs()
-                file.outputStream().use { output ->
-                    photo.copyTo(output)
+                openPhoto().use { photo ->
+                    photoDirectory.mkdirs()
+                    file.outputStream().use { output ->
+                        photo.copyTo(output)
+                    }
                 }
                 dataStore.edit { preferences ->
                     preferences[PHOTO_PREFERENCE] = file.name
@@ -102,6 +104,7 @@ class PreferencesBabyRepository(
         private const val KEY_NAME = "name"
         private const val KEY_BIRTHDAY = "birthday"
         private const val KEY_PHOTO = "photo"
+        private const val PHOTO_DIRECTORY_NAME = "baby_photo"
         private val NAME_PREFERENCE = stringPreferencesKey(KEY_NAME)
         private val BIRTHDAY_PREFERENCE = longPreferencesKey(KEY_BIRTHDAY)
         private val PHOTO_PREFERENCE = stringPreferencesKey(KEY_PHOTO)
