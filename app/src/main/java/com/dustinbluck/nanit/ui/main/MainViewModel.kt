@@ -13,21 +13,22 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 class MainViewModel(
     private val babyRepository: BabyRepository,
     private val logger: Logger
 ) : ViewModel() {
 
-    private val nameEditState = MutableStateFlow<NameEditState>(NameEditState.Closed)
+    private val editState = MutableStateFlow<EditState>(EditState.Closed)
 
-    val uiState: StateFlow<MainUiState> = combine<Baby, NameEditState, MainUiState>(
+    val uiState: StateFlow<MainUiState> = combine<Baby, EditState, MainUiState>(
         babyRepository.baby,
-        nameEditState
-    ) { baby, nameEdit ->
+        editState
+    ) { baby, edit ->
         MainUiState.Loaded(
             baby = baby,
-            nameEditState = nameEdit
+            editState = edit
         )
     }
         .catch { exception ->
@@ -45,35 +46,68 @@ class MainViewModel(
         )
 
     fun editName() {
-        nameEditState.value = NameEditState.Open(
+        edit(EditField.NAME)
+    }
+
+    fun editBirthday() {
+        edit(EditField.BIRTHDAY)
+    }
+
+    fun cancelEdit() {
+        editState.value = EditState.Closed
+    }
+
+    fun saveName(name: String) {
+        val trimmedName = name.trim()
+        if (trimmedName.isNotEmpty()) {
+            save(
+                field = EditField.NAME,
+                errorLogMessage = NAME_SAVE_ERROR_LOG_MESSAGE
+            ) {
+                babyRepository.setName(trimmedName)
+            }
+        }
+    }
+
+    fun saveBirthday(birthday: LocalDate) {
+        save(
+            field = EditField.BIRTHDAY,
+            errorLogMessage = BIRTHDAY_SAVE_ERROR_LOG_MESSAGE
+        ) {
+            babyRepository.setBirthday(birthday)
+        }
+    }
+
+    private fun edit(field: EditField) {
+        editState.value = EditState.Open(
+            field = field,
             isSaving = false,
             saveFailed = false
         )
     }
 
-    fun cancelNameEdit() {
-        nameEditState.value = NameEditState.Closed
-    }
-
-    fun saveName(name: String) {
-        val trimmedName = name.trim()
-        val currentState = nameEditState.value
-        if (trimmedName.isNotEmpty() && currentState is NameEditState.Open && !currentState.isSaving) {
-            nameEditState.value = NameEditState.Open(
+    private fun save(
+        field: EditField,
+        errorLogMessage: String,
+        write: suspend () -> Boolean
+    ) {
+        val currentState = editState.value
+        if (currentState is EditState.Open && currentState.field == field && !currentState.isSaving) {
+            editState.value = currentState.copy(
                 isSaving = true,
                 saveFailed = false
             )
             viewModelScope.launch {
-                if (babyRepository.setName(trimmedName)) {
-                    nameEditState.value = NameEditState.Closed
+                if (write()) {
+                    editState.value = EditState.Closed
                 } else {
                     logger.e(
                         TAG,
-                        NAME_SAVE_ERROR_LOG_MESSAGE
+                        errorLogMessage
                     )
-                    nameEditState.update { state ->
-                        if (state is NameEditState.Open) {
-                            NameEditState.Open(
+                    editState.update { state ->
+                        if (state is EditState.Open && state.field == field) {
+                            state.copy(
                                 isSaving = false,
                                 saveFailed = true
                             )
@@ -91,5 +125,6 @@ class MainViewModel(
         private const val TAG = "MainViewModel"
         private const val LOAD_ERROR_LOG_MESSAGE = "Failed to load baby"
         private const val NAME_SAVE_ERROR_LOG_MESSAGE = "Failed to save baby name"
+        private const val BIRTHDAY_SAVE_ERROR_LOG_MESSAGE = "Failed to save baby birthday"
     }
 }

@@ -10,4 +10,6 @@
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="name_save_error">Couldn\'t save name</string>
+    <string name="edit_birthday">Edit birthday</string>
+    <string name="birthday_save_error">Couldn\'t save birthday</string>
 </resources>

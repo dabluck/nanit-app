@@ -74,7 +74,7 @@ internal class MainViewModelTest {
                     birthday = null,
                     photo = null
                 ),
-                nameEditState = NameEditState.Closed
+                editState = EditState.Closed
             )
         )
     }
@@ -144,10 +144,10 @@ internal class MainViewModelTest {
     }
 
     @Test
-    fun nameEditIsClosedInitially() = testScope.runTest {
+    fun editIsClosedInitially() = testScope.runTest {
         val uiState = awaitLoadResult()
 
-        assertThat((uiState as? MainUiState.Loaded)?.nameEditState).isEqualTo(NameEditState.Closed)
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
     }
 
     @Test
@@ -156,8 +156,9 @@ internal class MainViewModelTest {
 
         val uiState = awaitLoadResult()
 
-        assertThat((uiState as? MainUiState.Loaded)?.nameEditState).isEqualTo(
-            NameEditState.Open(
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
+            EditState.Open(
+                field = EditField.NAME,
                 isSaving = false,
                 saveFailed = false
             )
@@ -165,13 +166,13 @@ internal class MainViewModelTest {
     }
 
     @Test
-    fun cancelNameEditClosesNameEdit() = testScope.runTest {
+    fun cancelEditClosesEdit() = testScope.runTest {
         subject.editName()
-        subject.cancelNameEdit()
+        subject.cancelEdit()
 
         val uiState = awaitLoadResult()
 
-        assertThat((uiState as? MainUiState.Loaded)?.nameEditState).isEqualTo(NameEditState.Closed)
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
     }
 
     @Test
@@ -185,24 +186,24 @@ internal class MainViewModelTest {
     }
 
     @Test
-    fun saveNameClosesNameEdit() = testScope.runTest {
+    fun saveNameClosesEdit() = testScope.runTest {
         subject.editName()
         subject.saveName(NAME)
 
         val uiState = awaitLoadResult()
 
-        assertThat((uiState as? MainUiState.Loaded)?.nameEditState).isEqualTo(NameEditState.Closed)
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
     }
 
     @Test
-    fun saveNameWithUnchangedNameClosesNameEdit() = testScope.runTest {
+    fun saveNameWithUnchangedNameClosesEdit() = testScope.runTest {
         babyRepository.setName(NAME)
         subject.editName()
         subject.saveName(NAME)
 
         val uiState = awaitLoadResult()
 
-        assertThat((uiState as? MainUiState.Loaded)?.nameEditState).isEqualTo(NameEditState.Closed)
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
     }
 
     @Test
@@ -216,7 +217,17 @@ internal class MainViewModelTest {
     }
 
     @Test
-    fun saveNameIsIgnoredWhenNameEditIsClosed() = testScope.runTest {
+    fun saveNameIsIgnoredWhenEditIsClosed() = testScope.runTest {
+        subject.saveName(NAME)
+
+        val baby = babyRepository.baby.first()
+
+        assertThat(baby.name).isNull()
+    }
+
+    @Test
+    fun saveNameIsIgnoredWhenBirthdayEditIsOpen() = testScope.runTest {
+        subject.editBirthday()
         subject.saveName(NAME)
 
         val baby = babyRepository.baby.first()
@@ -232,8 +243,9 @@ internal class MainViewModelTest {
 
         val uiState = awaitLoadResult()
 
-        assertThat((uiState as? MainUiState.Loaded)?.nameEditState).isEqualTo(
-            NameEditState.Open(
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
+            EditState.Open(
+                field = EditField.NAME,
                 isSaving = false,
                 saveFailed = true
             )
@@ -245,6 +257,99 @@ internal class MainViewModelTest {
         subject = createSubject(factory.failingBabyRepository(babyRepository))
         subject.editName()
         subject.saveName(NAME)
+
+        val entry = logger.entries.single()
+
+        assertThat(entry.level).isEqualTo(FakeLogger.Level.ERROR)
+    }
+
+    @Test
+    fun editBirthdayOpensBirthdayEdit() = testScope.runTest {
+        subject.editBirthday()
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
+            EditState.Open(
+                field = EditField.BIRTHDAY,
+                isSaving = false,
+                saveFailed = false
+            )
+        )
+    }
+
+    @Test
+    fun saveBirthdayStoresBirthday() = testScope.runTest {
+        subject.editBirthday()
+        subject.saveBirthday(BIRTHDAY)
+
+        val baby = babyRepository.baby.first()
+
+        assertThat(baby.birthday).isEqualTo(BIRTHDAY)
+    }
+
+    @Test
+    fun saveBirthdayClosesEdit() = testScope.runTest {
+        subject.editBirthday()
+        subject.saveBirthday(BIRTHDAY)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
+    }
+
+    @Test
+    fun saveBirthdayWithUnchangedBirthdayClosesEdit() = testScope.runTest {
+        babyRepository.setBirthday(BIRTHDAY)
+        subject.editBirthday()
+        subject.saveBirthday(BIRTHDAY)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
+    }
+
+    @Test
+    fun saveBirthdayIsIgnoredWhenEditIsClosed() = testScope.runTest {
+        subject.saveBirthday(BIRTHDAY)
+
+        val baby = babyRepository.baby.first()
+
+        assertThat(baby.birthday).isNull()
+    }
+
+    @Test
+    fun saveBirthdayIsIgnoredWhenNameEditIsOpen() = testScope.runTest {
+        subject.editName()
+        subject.saveBirthday(BIRTHDAY)
+
+        val baby = babyRepository.baby.first()
+
+        assertThat(baby.birthday).isNull()
+    }
+
+    @Test
+    fun failedSaveBirthdayKeepsBirthdayEditOpenWithError() = testScope.runTest {
+        subject = createSubject(factory.failingBabyRepository(babyRepository))
+        subject.editBirthday()
+        subject.saveBirthday(BIRTHDAY)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
+            EditState.Open(
+                field = EditField.BIRTHDAY,
+                isSaving = false,
+                saveFailed = true
+            )
+        )
+    }
+
+    @Test
+    fun failedSaveBirthdayIsLogged() = testScope.runTest {
+        subject = createSubject(factory.failingBabyRepository(babyRepository))
+        subject.editBirthday()
+        subject.saveBirthday(BIRTHDAY)
 
         val entry = logger.entries.single()
 

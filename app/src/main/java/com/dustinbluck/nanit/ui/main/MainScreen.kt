@@ -1,5 +1,6 @@
 package com.dustinbluck.nanit.ui.main
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,6 +34,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.getSelectedDate
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,6 +59,7 @@ import coil3.compose.AsyncImage
 import com.dustinbluck.nanit.R
 import com.dustinbluck.nanit.data.Baby
 import com.dustinbluck.nanit.deps.NanitDeps
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -109,19 +115,29 @@ fun MainScreen(
                     baby = state.baby,
                     isBirthdayEnabled = state.isBirthdayEnabled,
                     onEditNameClick = viewModel::editName,
+                    onEditBirthdayClick = viewModel::editBirthday,
                     onBirthdayClick = onBirthdayClick,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
                 )
-                val nameEditState = state.nameEditState
-                if (nameEditState is NameEditState.Open) {
-                    EditNameDialog(
-                        name = state.baby.name,
-                        editState = nameEditState,
-                        onSave = viewModel::saveName,
-                        onDismiss = viewModel::cancelNameEdit
-                    )
+                val editState = state.editState
+                if (editState is EditState.Open) {
+                    when (editState.field) {
+                        EditField.NAME -> EditNameDialog(
+                            name = state.baby.name,
+                            editState = editState,
+                            onSave = viewModel::saveName,
+                            onDismiss = viewModel::cancelEdit
+                        )
+
+                        EditField.BIRTHDAY -> EditBirthdayDialog(
+                            birthday = state.baby.birthday,
+                            editState = editState,
+                            onSave = viewModel::saveBirthday,
+                            onDismiss = viewModel::cancelEdit
+                        )
+                    }
                 }
             }
         }
@@ -134,6 +150,7 @@ private fun BabyDetails(
     baby: Baby,
     isBirthdayEnabled: Boolean,
     onEditNameClick: () -> Unit,
+    onEditBirthdayClick: () -> Unit,
     onBirthdayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -187,7 +204,15 @@ private fun BabyDetails(
                 BabyField(
                     label = stringResource(R.string.baby_birthday),
                     value = baby.birthday?.format(birthdayFormatter)
-                        ?: stringResource(R.string.not_set)
+                        ?: stringResource(R.string.not_set),
+                    action = {
+                        IconButton(onClick = onEditBirthdayClick) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_edit),
+                                contentDescription = stringResource(R.string.edit_birthday)
+                            )
+                        }
+                    }
                 )
             }
         }
@@ -235,7 +260,7 @@ private fun BabyField(
 @Composable
 private fun EditNameDialog(
     name: String?,
-    editState: NameEditState.Open,
+    editState: EditState.Open,
     onSave: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -295,4 +320,48 @@ private fun EditNameDialog(
             }
         }
     )
+}
+
+@Composable
+private fun EditBirthdayDialog(
+    birthday: LocalDate?,
+    editState: EditState.Open,
+    onSave: (LocalDate) -> Unit,
+    onDismiss: () -> Unit
+) {
+    @SuppressLint("NewApi")
+    val datePickerState = rememberDatePickerState(initialSelectedDate = birthday)
+
+    @SuppressLint("NewApi")
+    val selectedDate = datePickerState.getSelectedDate()
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (selectedDate != null) {
+                        onSave(selectedDate)
+                    }
+                },
+                enabled = selectedDate != null && !editState.isSaving
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    ) {
+        DatePicker(state = datePickerState)
+        if (editState.saveFailed) {
+            Text(
+                text = stringResource(R.string.birthday_save_error),
+                modifier = Modifier.padding(horizontal = 24.dp),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
 }
