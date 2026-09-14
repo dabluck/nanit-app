@@ -71,7 +71,8 @@ class NanitDepsImpl(
 
     private companion object {
         private const val TAG = "NanitDeps"
-        private const val BABY_DATA_STORE_CORRUPTION_LOG_MESSAGE = "Baby data store was corrupt and has been reset"
+        private const val BABY_DATA_STORE_CORRUPTION_LOG_MESSAGE =
+            "Baby data store was corrupt and has been reset"
         private const val BABY_DATA_STORE_NAME = "baby"
         private const val CAMERA_PHOTO_AUTHORITY_SUFFIX = ".cameraphoto"
     }
