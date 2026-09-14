@@ -4,34 +4,49 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -89,14 +104,26 @@ fun MainScreen(
                 )
             }
 
-            is MainUiState.Loaded -> BabyDetails(
-                baby = state.baby,
-                isBirthdayEnabled = state.isBirthdayEnabled,
-                onBirthdayClick = onBirthdayClick,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            )
+            is MainUiState.Loaded -> {
+                BabyDetails(
+                    baby = state.baby,
+                    isBirthdayEnabled = state.isBirthdayEnabled,
+                    onEditNameClick = viewModel::editName,
+                    onBirthdayClick = onBirthdayClick,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                )
+                val nameEditState = state.nameEditState
+                if (nameEditState is NameEditState.Open) {
+                    EditNameDialog(
+                        name = state.baby.name,
+                        editState = nameEditState,
+                        onSave = viewModel::saveName,
+                        onDismiss = viewModel::cancelNameEdit
+                    )
+                }
+            }
         }
     }
 }
@@ -106,6 +133,7 @@ fun MainScreen(
 private fun BabyDetails(
     baby: Baby,
     isBirthdayEnabled: Boolean,
+    onEditNameClick: () -> Unit,
     onBirthdayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -146,7 +174,15 @@ private fun BabyDetails(
                 BabyField(
                     label = stringResource(R.string.baby_name),
                     value = baby.name?.takeUnless(String::isBlank)
-                        ?: stringResource(R.string.not_set)
+                        ?: stringResource(R.string.not_set),
+                    action = {
+                        IconButton(onClick = onEditNameClick) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_edit),
+                                contentDescription = stringResource(R.string.edit_name)
+                            )
+                        }
+                    }
                 )
                 BabyField(
                     label = stringResource(R.string.baby_birthday),
@@ -174,17 +210,89 @@ private fun BabyDetails(
 private fun BabyField(
     label: String,
     value: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    action: (@Composable () -> Unit)? = null
 ) {
-    Column(modifier = modifier) {
-        Text(
-            text = label,
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.labelLarge
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleLargeEmphasized
-        )
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLargeEmphasized
+            )
+        }
+        action?.invoke()
     }
+}
+
+@Composable
+private fun EditNameDialog(
+    name: String?,
+    editState: NameEditState.Open,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val nameState = rememberTextFieldState(initialText = name.orEmpty())
+    val focusRequester = remember {
+        FocusRequester()
+    }
+    val canSave = nameState.text.isNotBlank() && !editState.isSaving
+    LaunchedEffect(focusRequester) {
+        focusRequester.requestFocus()
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(stringResource(R.string.edit_name))
+        },
+        text = {
+            OutlinedTextField(
+                state = nameState,
+                modifier = Modifier.focusRequester(focusRequester),
+                label = {
+                    Text(stringResource(R.string.baby_name))
+                },
+                supportingText = if (editState.saveFailed) {
+                    {
+                        Text(stringResource(R.string.name_save_error))
+                    }
+                } else {
+                    null
+                },
+                isError = editState.saveFailed,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Done
+                ),
+                onKeyboardAction = {
+                    if (canSave) {
+                        onSave(nameState.text.toString())
+                    }
+                },
+                lineLimits = TextFieldLineLimits.SingleLine
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onSave(nameState.text.toString())
+                },
+                enabled = canSave
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }

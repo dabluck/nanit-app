@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.dustinbluck.nanit.deps.TestDependencyFactory
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
@@ -17,18 +18,23 @@ internal class PreferencesBabyRepositoryTest {
     @get:Rule
     val folder = TemporaryFolder()
 
+    private val testScope = TestScope()
+
     private lateinit var factory: TestDependencyFactory
 
     private lateinit var subject: PreferencesBabyRepository
 
     @Before
     fun setUp() {
-        factory = TestDependencyFactory(folder.root)
+        factory = TestDependencyFactory(
+            root = folder.root,
+            testScope = testScope
+        )
         subject = factory.babyRepository()
     }
 
     @Test
-    fun babyIsEmptyWhenNothingIsStored() = runTest {
+    fun babyIsEmptyWhenNothingIsStored() = testScope.runTest {
         val baby = subject.baby.first()
 
         assertThat(baby).isEqualTo(
@@ -41,7 +47,7 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
-    fun setNameStoresName() = runTest {
+    fun setNameStoresName() = testScope.runTest {
         subject.setName(NAME)
 
         val baby = subject.baby.first()
@@ -56,7 +62,7 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
-    fun setBirthdayStoresBirthday() = runTest {
+    fun setBirthdayStoresBirthday() = testScope.runTest {
         subject.setBirthday(BIRTHDAY)
 
         val baby = subject.baby.first()
@@ -71,7 +77,7 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
-    fun setPhotoStoresPhotoBytes() = runTest {
+    fun setPhotoStoresPhotoBytes() = testScope.runTest {
         subject.setPhoto(PHOTO.inputStream())
 
         val photo = subject.baby.first().photo
@@ -80,7 +86,7 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
-    fun setPhotoDeletesPreviousPhoto() = runTest {
+    fun setPhotoDeletesPreviousPhoto() = testScope.runTest {
         subject.setPhoto(PHOTO.inputStream())
         subject.setPhoto(OTHER_PHOTO.inputStream())
 
@@ -90,7 +96,7 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
-    fun photoIsNullWhenPhotoFileIsMissing() = runTest {
+    fun photoIsNullWhenPhotoFileIsMissing() = testScope.runTest {
         subject.setPhoto(PHOTO.inputStream())
         factory.babyPhotoDirectory().deleteRecursively()
 
@@ -100,35 +106,35 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
-    fun setNameReturnsTrue() = runTest {
+    fun setNameReturnsTrue() = testScope.runTest {
         val result = subject.setName(NAME)
 
         assertThat(result).isTrue()
     }
 
     @Test
-    fun setBirthdayReturnsTrue() = runTest {
+    fun setBirthdayReturnsTrue() = testScope.runTest {
         val result = subject.setBirthday(BIRTHDAY)
 
         assertThat(result).isTrue()
     }
 
     @Test
-    fun setPhotoReturnsTrue() = runTest {
+    fun setPhotoReturnsTrue() = testScope.runTest {
         val result = subject.setPhoto(PHOTO.inputStream())
 
         assertThat(result).isTrue()
     }
 
     @Test
-    fun setPhotoReturnsFalseWhenPhotoCannotBeRead() = runTest {
+    fun setPhotoReturnsFalseWhenPhotoCannotBeRead() = testScope.runTest {
         val result = subject.setPhoto(FAILING_PHOTO)
 
         assertThat(result).isFalse()
     }
 
     @Test
-    fun failedSetPhotoKeepsPreviousPhoto() = runTest {
+    fun failedSetPhotoKeepsPreviousPhoto() = testScope.runTest {
         subject.setPhoto(PHOTO.inputStream())
         subject.setPhoto(FAILING_PHOTO)
 
@@ -138,7 +144,7 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
-    fun failedSetPhotoDeletesPartialPhoto() = runTest {
+    fun failedSetPhotoDeletesPartialPhoto() = testScope.runTest {
         subject.setPhoto(FAILING_PHOTO)
 
         val photos = factory.babyPhotoDirectory().list()
@@ -147,7 +153,7 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
-    fun babyEmitsWhenValueChanges() = runTest {
+    fun babyEmitsWhenValueChanges() = testScope.runTest {
         subject.baby.test {
             skipItems(1)
 
@@ -164,7 +170,7 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
-    fun babyEmitsWhenPhotoIsReplaced() = runTest {
+    fun babyEmitsWhenPhotoIsReplaced() = testScope.runTest {
         subject.setPhoto(PHOTO.inputStream())
 
         subject.baby.test {

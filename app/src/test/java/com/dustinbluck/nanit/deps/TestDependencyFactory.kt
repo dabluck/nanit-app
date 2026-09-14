@@ -3,15 +3,22 @@ package com.dustinbluck.nanit.deps
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.dustinbluck.nanit.data.BabyRepository
+import com.dustinbluck.nanit.data.FailingBabyRepository
 import com.dustinbluck.nanit.data.PreferencesBabyRepository
 import com.dustinbluck.nanit.logging.FakeLogger
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
-internal class TestDependencyFactory(private val root: File) {
+internal class TestDependencyFactory(
+    private val root: File,
+    private val testScope: TestScope
+) {
     fun babyDataStoreFile(): File {
         return File(
             root,
@@ -26,16 +33,22 @@ internal class TestDependencyFactory(private val root: File) {
         )
     }
 
-    fun babyDataStore(file: File = babyDataStoreFile()): DataStore<Preferences> {
-        return PreferenceDataStoreFactory.create {
-            file
-        }
+    fun babyDataStore(
+        file: File = babyDataStoreFile(),
+        scope: CoroutineScope = testScope.backgroundScope
+    ): DataStore<Preferences> {
+        return PreferenceDataStoreFactory.create(
+            scope = scope,
+            produceFile = {
+                file
+            }
+        )
     }
 
     fun babyRepository(
         dataStore: DataStore<Preferences> = babyDataStore(),
         photoDirectory: File = babyPhotoDirectory(),
-        ioDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher()
+        ioDispatcher: CoroutineDispatcher = UnconfinedTestDispatcher(testScope.testScheduler)
     ): PreferencesBabyRepository {
         return PreferencesBabyRepository(
             dataStore = dataStore,
@@ -44,6 +57,10 @@ internal class TestDependencyFactory(private val root: File) {
             },
             ioDispatcher = ioDispatcher
         )
+    }
+
+    fun failingBabyRepository(delegate: BabyRepository = babyRepository()): FailingBabyRepository {
+        return FailingBabyRepository(delegate)
     }
 
     fun logger(): FakeLogger {

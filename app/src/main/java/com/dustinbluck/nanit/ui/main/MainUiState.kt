@@ -7,7 +7,10 @@ sealed interface MainUiState {
 
     data object Error : MainUiState
 
-    data class Loaded(val baby: Baby) : MainUiState {
+    data class Loaded(
+        val baby: Baby,
+        val nameEditState: NameEditState
+    ) : MainUiState {
         val isBirthdayEnabled: Boolean
             get() = !baby.name.isNullOrBlank() && baby.birthday != null
     }
