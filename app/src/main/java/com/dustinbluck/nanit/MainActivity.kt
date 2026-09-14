@@ -13,7 +13,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.dustinbluck.nanit.ui.birthday.BirthdayScreen
 import com.dustinbluck.nanit.ui.main.MainScreen
@@ -42,6 +44,10 @@ class MainActivity : ComponentActivity() {
                     onBack = {
                         backStack.removeLastOrNull()
                     },
+                    entryDecorators = listOf(
+                        rememberSaveableStateHolderNavEntryDecorator(),
+                        rememberViewModelStoreNavEntryDecorator()
+                    ),
                     transitionSpec = {
                         fadeIn() togetherWith ExitTransition.KeepUntilTransitionsFinished
                     },

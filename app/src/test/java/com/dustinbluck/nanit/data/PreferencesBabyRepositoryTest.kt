@@ -1,49 +1,30 @@
 package com.dustinbluck.nanit.data
 
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import app.cash.turbine.test
+import com.dustinbluck.nanit.deps.TestDependencyFactory
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.time.LocalDate
 
-@OptIn(ExperimentalCoroutinesApi::class)
 internal class PreferencesBabyRepositoryTest {
     @get:Rule
     val folder = TemporaryFolder()
 
-    private lateinit var photoDirectory: File
+    private lateinit var factory: TestDependencyFactory
 
     private lateinit var subject: PreferencesBabyRepository
 
     @Before
     fun setUp() {
-        val dataStore = PreferenceDataStoreFactory.create {
-            File(
-                folder.root,
-                FILE_NAME
-            )
-        }
-        photoDirectory = File(
-            folder.root,
-            PHOTO_DIRECTORY_NAME
-        )
-        subject = PreferencesBabyRepository(
-            dataStore = dataStore,
-            producePhotoDirectory = {
-                photoDirectory
-            },
-            ioDispatcher = UnconfinedTestDispatcher()
-        )
+        factory = TestDependencyFactory(folder.root)
+        subject = factory.babyRepository()
     }
 
     @Test
@@ -105,13 +86,13 @@ internal class PreferencesBabyRepositoryTest {
 
         val photo = subject.baby.first().photo
 
-        assertThat(photoDirectory.list()).asList().containsExactly(photo?.name)
+        assertThat(factory.babyPhotoDirectory().list()).asList().containsExactly(photo?.name)
     }
 
     @Test
     fun photoIsNullWhenPhotoFileIsMissing() = runTest {
         subject.setPhoto(PHOTO.inputStream())
-        photoDirectory.deleteRecursively()
+        factory.babyPhotoDirectory().deleteRecursively()
 
         val baby = subject.baby.first()
 
@@ -160,7 +141,7 @@ internal class PreferencesBabyRepositoryTest {
     fun failedSetPhotoDeletesPartialPhoto() = runTest {
         subject.setPhoto(FAILING_PHOTO)
 
-        val photos = photoDirectory.list()
+        val photos = factory.babyPhotoDirectory().list()
 
         assertThat(photos).isEmpty()
     }
@@ -196,8 +177,6 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     private companion object {
-        private const val FILE_NAME = "baby.preferences_pb"
-        private const val PHOTO_DIRECTORY_NAME = "baby_photo"
         private const val NAME = "Dustin"
         private const val READ_FAILURE_MESSAGE = "read failed"
         private val BIRTHDAY = LocalDate.of(

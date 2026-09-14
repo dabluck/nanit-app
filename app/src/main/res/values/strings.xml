@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">Nanit</string>
+    <string name="baby_name">Name</string>
+    <string name="baby_birthday">Birthday</string>
+    <string name="baby_photo">Baby photo</string>
+    <string name="not_set">Not set</string>
+    <string name="baby_load_error">Couldn\'t load baby details</string>
+    <string name="show_birthday_screen">Show birthday screen</string>
 </resources>
