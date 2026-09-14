@@ -4,6 +4,8 @@ import app.cash.turbine.test
 import com.dustinbluck.nanit.deps.TestDependencyFactory
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -191,6 +193,91 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
+    fun setPhotoReturnsFalseWhenPhotoAccessIsDenied() = testScope.runTest {
+        val result = subject.setPhoto(::openDeniedPhoto)
+
+        assertThat(result).isFalse()
+    }
+
+    @Test
+    fun concurrentSetPhotoStoresLastPhoto() = testScope.runTest {
+        listOf(
+            launch {
+                subject.setPhoto(PHOTO::inputStream)
+            },
+            launch {
+                subject.setPhoto(OTHER_PHOTO::inputStream)
+            }
+        ).joinAll()
+
+        val photo = subject.baby.first().photo
+
+        assertThat(photo?.readBytes()).isEqualTo(OTHER_PHOTO)
+    }
+
+    @Test
+    fun setNameReturnsFalseWhenPreferencesCannotBeWritten() = testScope.runTest {
+        subject = factory.babyRepository(dataStore = factory.unwritableBabyDataStore())
+
+        val result = subject.setName(NAME)
+
+        assertThat(result).isFalse()
+    }
+
+    @Test
+    fun setBirthdayReturnsFalseWhenPreferencesCannotBeWritten() = testScope.runTest {
+        subject = factory.babyRepository(dataStore = factory.unwritableBabyDataStore())
+
+        val result = subject.setBirthday(BIRTHDAY)
+
+        assertThat(result).isFalse()
+    }
+
+    @Test
+    fun setPhotoReturnsFalseWhenPreferencesCannotBeWritten() = testScope.runTest {
+        subject = factory.babyRepository(dataStore = factory.unwritableBabyDataStore())
+
+        val result = subject.setPhoto(PHOTO::inputStream)
+
+        assertThat(result).isFalse()
+    }
+
+    @Test
+    fun setPhotoDeletesPhotoWhenPreferencesCannotBeWritten() = testScope.runTest {
+        subject = factory.babyRepository(dataStore = factory.unwritableBabyDataStore())
+        subject.setPhoto(PHOTO::inputStream)
+
+        val photos = factory.babyPhotoDirectory().list()
+
+        assertThat(photos).isEmpty()
+    }
+
+    @Test
+    fun babyIsEmptyWhenPreferencesAreCorrupt() = testScope.runTest {
+        factory.babyDataStoreFile().writeText(CORRUPT_DATA_STORE_CONTENTS)
+
+        val baby = subject.baby.first()
+
+        assertThat(baby).isEqualTo(
+            Baby(
+                name = null,
+                birthday = null,
+                photo = null
+            )
+        )
+    }
+
+    @Test
+    fun setNameStoresNameWhenPreferencesAreCorrupt() = testScope.runTest {
+        factory.babyDataStoreFile().writeText(CORRUPT_DATA_STORE_CONTENTS)
+        subject.setName(NAME)
+
+        val baby = subject.baby.first()
+
+        assertThat(baby.name).isEqualTo(NAME)
+    }
+
+    @Test
     fun babyEmitsWhenValueChanges() = testScope.runTest {
         subject.baby.test {
             skipItems(1)
@@ -220,10 +307,16 @@ internal class PreferencesBabyRepositoryTest {
         }
     }
 
+    private fun openDeniedPhoto(): InputStream {
+        throw SecurityException(ACCESS_DENIED_MESSAGE)
+    }
+
     private companion object {
         private const val NAME = "Dustin"
         private const val READ_FAILURE_MESSAGE = "read failed"
+        private const val ACCESS_DENIED_MESSAGE = "access denied"
         private const val MISSING_PHOTO_FILE_NAME = "missing_photo.jpg"
+        private const val CORRUPT_DATA_STORE_CONTENTS = "not a preferences file"
         private val BIRTHDAY = LocalDate.of(
             2025,
             3,

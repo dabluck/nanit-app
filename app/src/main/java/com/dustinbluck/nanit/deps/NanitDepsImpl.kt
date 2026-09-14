@@ -1,10 +1,12 @@
 package com.dustinbluck.nanit.deps
 
 import android.app.Application
+import androidx.core.content.FileProvider
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import androidx.core.content.FileProvider
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.dustinbluck.nanit.data.BabyRepository
 import com.dustinbluck.nanit.data.PhotoManager
@@ -24,7 +26,16 @@ class NanitDepsImpl(
 ) : NanitDeps {
 
     private val babyDataStore: DataStore<Preferences> by lazy {
-        PreferenceDataStoreFactory.create {
+        PreferenceDataStoreFactory.create(
+            corruptionHandler = ReplaceFileCorruptionHandler { exception ->
+                logger.e(
+                    TAG,
+                    BABY_DATA_STORE_CORRUPTION_LOG_MESSAGE,
+                    exception
+                )
+                emptyPreferences()
+            }
+        ) {
             application.preferencesDataStoreFile(BABY_DATA_STORE_NAME)
         }
     }
@@ -59,6 +70,8 @@ class NanitDepsImpl(
     }
 
     private companion object {
+        private const val TAG = "NanitDeps"
+        private const val BABY_DATA_STORE_CORRUPTION_LOG_MESSAGE = "Baby data store was corrupt and has been reset"
         private const val BABY_DATA_STORE_NAME = "baby"
         private const val CAMERA_PHOTO_AUTHORITY_SUFFIX = ".cameraphoto"
     }

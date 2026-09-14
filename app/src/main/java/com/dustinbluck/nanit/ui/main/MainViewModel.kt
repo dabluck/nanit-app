@@ -115,22 +115,25 @@ class MainViewModel(
                 saveFailed = false
             )
             viewModelScope.launch {
-                if (write()) {
-                    editState.value = EditState.Closed
-                } else {
+                val saved = write()
+                if (!saved) {
                     logger.e(
                         TAG,
                         errorLogMessage
                     )
-                    editState.update { state ->
-                        if (state is EditState.Open && state.field == field) {
+                }
+                editState.update { state ->
+                    if (state is EditState.Open && state.field == field) {
+                        if (saved) {
+                            EditState.Closed
+                        } else {
                             state.copy(
                                 isSaving = false,
                                 saveFailed = true
                             )
-                        } else {
-                            state
                         }
+                    } else {
+                        state
                     }
                 }
             }

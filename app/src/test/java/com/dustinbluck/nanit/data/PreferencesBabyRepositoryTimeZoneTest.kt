@@ -2,9 +2,6 @@ package com.dustinbluck.nanit.data
 
 import com.dustinbluck.nanit.deps.TestDependencyFactory
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -34,8 +31,6 @@ internal class PreferencesBabyRepositoryTimeZoneTest(
 
     private lateinit var factory: TestDependencyFactory
 
-    private lateinit var dataStoreJob: Job
-
     private lateinit var subject: PreferencesBabyRepository
 
     @Before
@@ -46,12 +41,7 @@ internal class PreferencesBabyRepositoryTimeZoneTest(
             root = folder.root,
             testScope = testScope
         )
-        dataStoreJob = Job(testScope.backgroundScope.coroutineContext[Job])
-        subject = factory.babyRepository(
-            dataStore = factory.babyDataStore(
-                scope = CoroutineScope(testScope.backgroundScope.coroutineContext + dataStoreJob)
-            )
-        )
+        subject = factory.babyRepository()
     }
 
     @After
@@ -72,9 +62,8 @@ internal class PreferencesBabyRepositoryTimeZoneTest(
     @Test
     fun birthdayIsUnchangedAfterRestartInNewTimeZone() = testScope.runTest {
         subject.setBirthday(birthday)
-        dataStoreJob.cancelAndJoin()
         setDefaultTimeZone(readTimeZone)
-        val restartedRepository = factory.babyRepository()
+        val restartedRepository = factory.restartedBabyRepository()
 
         val baby = restartedRepository.baby.first()
 

@@ -394,6 +394,7 @@ private fun EditBirthdayDialog(
     onSave: (LocalDate) -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Future birthdays can currently be picked and saved. We should probably disallow them
     @SuppressLint("NewApi")
     val datePickerState = rememberDatePickerState(initialSelectedDate = birthday)
 

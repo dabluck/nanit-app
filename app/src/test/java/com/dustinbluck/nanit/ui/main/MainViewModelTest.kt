@@ -81,7 +81,7 @@ internal class MainViewModelTest {
 
     @Test
     fun uiStateIsErrorWhenBabyCannotBeRead() = testScope.runTest {
-        factory.babyDataStoreFile().writeText(CORRUPT_DATA_STORE_CONTENTS)
+        factory.babyDataStoreFile().mkdirs()
 
         val uiState = awaitLoadResult()
 
@@ -90,7 +90,7 @@ internal class MainViewModelTest {
 
     @Test
     fun readFailureIsLoggedWithException() = testScope.runTest {
-        factory.babyDataStoreFile().writeText(CORRUPT_DATA_STORE_CONTENTS)
+        factory.babyDataStoreFile().mkdirs()
         awaitLoadResult()
 
         val entry = logger.entries.single()
@@ -487,6 +487,54 @@ internal class MainViewModelTest {
         assertThat(entry.level).isEqualTo(FakeLogger.Level.ERROR)
     }
 
+    @Test
+    fun finishedSaveKeepsNewlyOpenedEditOpen() = testScope.runTest {
+        val repository = factory.pausableBabyRepository(babyRepository)
+        subject = createSubject(repository)
+        subject.editPhoto()
+        subject.savePhoto(PHOTO::inputStream)
+        subject.cancelEdit()
+        subject.editName()
+        repository.resumeWrites(success = true)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
+            EditState.Open(
+                field = EditField.NAME,
+                isSaving = false,
+                saveFailed = false
+            )
+        )
+    }
+
+    @Test
+    fun failedSaveAfterCancelEditKeepsEditClosed() = testScope.runTest {
+        val repository = factory.pausableBabyRepository(babyRepository)
+        subject = createSubject(repository)
+        subject.editName()
+        subject.saveName(NAME)
+        subject.cancelEdit()
+        repository.resumeWrites(success = false)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
+    }
+
+    @Test
+    fun saveIsIgnoredWhileSaving() = testScope.runTest {
+        val repository = factory.pausableBabyRepository(babyRepository)
+        subject = createSubject(repository)
+        subject.editName()
+        subject.saveName(NAME)
+        subject.saveName(NAME)
+
+        val writeCount = repository.writeCount
+
+        assertThat(writeCount).isEqualTo(1)
+    }
+
     private fun createSubject(repository: BabyRepository): MainViewModel {
         return MainViewModel(
             babyRepository = repository,
@@ -501,7 +549,6 @@ internal class MainViewModelTest {
     }
 
     private companion object {
-        private const val CORRUPT_DATA_STORE_CONTENTS = "not a preferences file"
         private const val NAME = "Dustin"
         private const val UNTRIMMED_NAME = "  Dustin  "
         private const val BLANK_NAME = " "
