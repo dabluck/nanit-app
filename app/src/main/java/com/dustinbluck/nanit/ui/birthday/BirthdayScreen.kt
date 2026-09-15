@@ -1,5 +1,9 @@
 package com.dustinbluck.nanit.ui.birthday
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,10 +20,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -35,15 +45,22 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImagePainter
+import coil3.compose.LocalPlatformContext
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
+import coil3.size.Dimension
+import coil3.size.Precision
+import coil3.size.Size
 import com.dustinbluck.nanit.R
 import com.dustinbluck.nanit.deps.NanitDeps
+import com.dustinbluck.nanit.ui.theme.ElephantBackground
+import com.dustinbluck.nanit.ui.theme.FoxBackground
+import com.dustinbluck.nanit.ui.theme.PelicanBackground
 
-@OptIn(
-    ExperimentalMaterial3Api::class,
-    ExperimentalMaterial3ExpressiveApi::class
-)
 @Composable
 fun BirthdayScreen(
+    mode: BirthdayMode,
     onCloseClick: () -> Unit,
     viewModel: BirthdayViewModel = viewModel {
         BirthdayViewModel(
@@ -54,6 +71,65 @@ fun BirthdayScreen(
     }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalPlatformContext.current
+    val displayWidth = LocalResources.current.displayMetrics.widthPixels
+    val backgroundRequest = remember(
+        context,
+        mode
+    ) {
+        // exact size since our images are pretty large and we only want to use the memory we need
+        ImageRequest.Builder(context)
+            .data(backgroundDrawableOf(mode))
+            .size(
+                Size(
+                    width = Dimension(displayWidth),
+                    height = Dimension.Undefined
+                )
+            )
+            .precision(Precision.EXACT)
+            .build()
+    }
+    val backgroundPainter = rememberAsyncImagePainter(
+        model = backgroundRequest,
+        contentScale = ContentScale.FillWidth
+    )
+    val backgroundState by backgroundPainter.state.collectAsStateWithLifecycle()
+    val isBackgroundLoading = backgroundState is AsyncImagePainter.State.Empty ||
+            backgroundState is AsyncImagePainter.State.Loading
+    val contentState = if (uiState is BirthdayUiState.Loaded && isBackgroundLoading) {
+        BirthdayUiState.Loading
+    } else {
+        uiState
+    }
+    BirthdayContent(
+        mode = mode,
+        uiState = contentState,
+        backgroundPainter = backgroundPainter,
+        onCloseClick = onCloseClick
+    )
+}
+
+private fun backgroundDrawableOf(mode: BirthdayMode): Int {
+    return when (mode) {
+        BirthdayMode.FOX -> R.drawable.bg_fox
+        BirthdayMode.ELEPHANT -> R.drawable.bg_elephant
+        BirthdayMode.PELICAN -> R.drawable.bg_pelican
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BirthdayContent(
+    mode: BirthdayMode,
+    uiState: BirthdayUiState,
+    backgroundPainter: Painter,
+    onCloseClick: () -> Unit
+) {
+    val backgroundColor = when (mode) {
+        BirthdayMode.FOX -> FoxBackground
+        BirthdayMode.ELEPHANT -> ElephantBackground
+        BirthdayMode.PELICAN -> PelicanBackground
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -66,43 +142,85 @@ fun BirthdayScreen(
                             contentDescription = stringResource(R.string.close)
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
-        }
+        },
+        containerColor = backgroundColor
     ) { innerPadding ->
-        when (val state = uiState) {
-            BirthdayUiState.Loading -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                LoadingIndicator()
+        AnimatedContent(
+            targetState = uiState,
+            modifier = Modifier.fillMaxSize(),
+            transitionSpec = {
+                fadeIn() togetherWith fadeOut()
+            },
+            contentKey = { state ->
+                state::class
             }
+        ) { state ->
+            when (state) {
+                BirthdayUiState.Loading -> {
+                    BirthdayLoading(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                    )
+                }
 
-            BirthdayUiState.Error -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.baby_load_error),
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                BirthdayUiState.Error -> {
+                    BirthdayError(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                    )
+                }
+
+                is BirthdayUiState.Loaded -> {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Image(
+                            painter = backgroundPainter,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            alignment = Alignment.BottomCenter,
+                            contentScale = ContentScale.FillWidth
+                        )
+                        BirthdayDetails(
+                            name = state.name,
+                            age = state.age.value,
+                            ageUnit = state.age.unit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                                .padding(horizontal = 50.dp)
+                        )
+                    }
+                }
             }
-
-            is BirthdayUiState.Loaded -> BirthdayDetails(
-                name = state.name,
-                age = state.age.value,
-                ageUnit = state.age.unit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 50.dp)
-            )
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun BirthdayLoading(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        LoadingIndicator()
+    }
+}
+
+@Composable
+private fun BirthdayError(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = stringResource(R.string.baby_load_error),
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }
 
