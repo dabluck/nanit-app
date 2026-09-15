@@ -19,7 +19,7 @@ style:
   MaxLineLength:
     active: false
   NewLineAtEndOfFile:
-    active: false
+    active: true
   ReturnCount:
     active: false
   WildcardImport:
