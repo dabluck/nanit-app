@@ -67,7 +67,11 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
 
-                            is Screen.Birthday -> BirthdayScreen(mode = key.mode)
+                            is Screen.Birthday -> BirthdayScreen(
+                                onCloseClick = {
+                                    backStack.removeLastOrNull()
+                                }
+                            )
                         }
                     }
                 }

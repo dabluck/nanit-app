@@ -15,6 +15,7 @@ import com.dustinbluck.nanit.logging.AndroidLogger
 import com.dustinbluck.nanit.logging.Logger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import java.time.Clock
 
 /**
  * for a relatively small app without activity-scoped dependencies or other complexities,
@@ -68,6 +69,9 @@ class NanitDepsImpl(
     override val logger: Logger by lazy {
         AndroidLogger()
     }
+
+    override val clock: Clock
+        get() = Clock.systemDefaultZone()
 
     private companion object {
         private const val TAG = "NanitDeps"
