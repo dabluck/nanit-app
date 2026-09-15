@@ -11,18 +11,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -30,28 +31,30 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.getSelectedDate
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +75,7 @@ import com.dustinbluck.nanit.R
 import com.dustinbluck.nanit.data.Baby
 import com.dustinbluck.nanit.data.PhotoManager
 import com.dustinbluck.nanit.deps.NanitDeps
+import kotlinx.coroutines.launch
 import java.io.FileNotFoundException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -174,22 +178,26 @@ fun MainScreen(
                             onDismiss = viewModel::cancelEdit
                         )
 
-                        EditField.PHOTO -> EditPhotoSheet(
-                            editState = editState,
-                            canTakePhoto = canTakePhoto,
-                            onChoosePhotoClick = {
-                                choosePhotoLauncher.launch(
-                                    PickVisualMediaRequest(
-                                        ActivityResultContracts.PickVisualMedia.ImageOnly
-                                    )
+                        EditField.PHOTO -> {
+                            if (!editState.isSaving) {
+                                EditPhotoSheet(
+                                    editState = editState,
+                                    canTakePhoto = canTakePhoto,
+                                    onChoosePhotoClick = {
+                                        choosePhotoLauncher.launch(
+                                            PickVisualMediaRequest(
+                                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                                            )
+                                        )
+                                    },
+                                    onTakePhotoClick = {
+                                        photoManager.prepareCameraPhoto()
+                                        takePhotoLauncher.launch(photoManager.cameraPhotoUri)
+                                    },
+                                    onDismiss = viewModel::cancelEdit
                                 )
-                            },
-                            onTakePhotoClick = {
-                                photoManager.prepareCameraPhoto()
-                                takePhotoLauncher.launch(photoManager.cameraPhotoUri)
-                            },
-                            onDismiss = viewModel::cancelEdit
-                        )
+                            }
+                        }
                     }
                 }
             }
@@ -441,35 +449,58 @@ private fun EditPhotoSheet(
     onTakePhotoClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val listItemColors =
-        ListItemDefaults.colors(containerColor = BottomSheetDefaults.ContainerColor)
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        ListItem(
-            onClick = onChoosePhotoClick,
-            enabled = !editState.isSaving,
-            leadingContent = {
+    val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden)
+    val scope = rememberCoroutineScope()
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier.padding(
+                horizontal = 24.dp,
+                vertical = 8.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilledTonalButton(
+                onClick = {
+                    scope.launch {
+                        sheetState.hide()
+                        onDismiss()
+                        onChoosePhotoClick()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !editState.isSaving
+            ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_photo_library),
-                    contentDescription = null
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize)
                 )
-            },
-            colors = listItemColors
-        ) {
-            Text(stringResource(R.string.choose_photo))
-        }
-        if (canTakePhoto) {
-            ListItem(
-                onClick = onTakePhotoClick,
-                enabled = !editState.isSaving,
-                leadingContent = {
+                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                Text(stringResource(R.string.choose_photo))
+            }
+            if (canTakePhoto) {
+                FilledTonalButton(
+                    onClick = {
+                        scope.launch {
+                            sheetState.hide()
+                            onDismiss()
+                            onTakePhotoClick()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !editState.isSaving
+                ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_photo_camera),
-                        contentDescription = null
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize)
                     )
-                },
-                colors = listItemColors
-            ) {
-                Text(stringResource(R.string.take_photo))
+                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                    Text(stringResource(R.string.take_photo))
+                }
             }
         }
         if (editState.saveFailed) {
