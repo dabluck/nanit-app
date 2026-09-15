@@ -17,6 +17,7 @@ import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDe
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.dustinbluck.nanit.ui.birthday.BirthdayMode
 import com.dustinbluck.nanit.ui.birthday.BirthdayScreen
 import com.dustinbluck.nanit.ui.main.MainScreen
 import com.dustinbluck.nanit.ui.theme.NanitTheme
@@ -62,11 +63,11 @@ class MainActivity : ComponentActivity() {
                         when (key) {
                             Screen.Main -> MainScreen(
                                 onBirthdayClick = {
-                                    backStack.add(Screen.Birthday)
+                                    backStack.add(Screen.Birthday(BirthdayMode.entries.random()))
                                 }
                             )
 
-                            Screen.Birthday -> BirthdayScreen()
+                            is Screen.Birthday -> BirthdayScreen(mode = key.mode)
                         }
                     }
                 }

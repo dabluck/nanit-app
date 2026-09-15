@@ -10,7 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
 @Composable
-fun BirthdayScreen() {
+fun BirthdayScreen(mode: BirthdayMode) {
     Scaffold { innerPadding ->
         Box(
             modifier = Modifier
@@ -18,7 +18,7 @@ fun BirthdayScreen() {
                 .padding(innerPadding),
             contentAlignment = Alignment.Center
         ) {
-            Text("Birthday")
+            Text(mode.name)
         }
     }
 }
