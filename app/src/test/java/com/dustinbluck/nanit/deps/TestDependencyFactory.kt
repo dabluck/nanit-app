@@ -17,6 +17,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import java.io.File
+import java.time.Clock
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class TestDependencyFactory(
@@ -114,6 +117,13 @@ internal class TestDependencyFactory(
 
     fun logger(): FakeLogger {
         return FakeLogger()
+    }
+
+    fun clock(today: LocalDate): Clock {
+        return Clock.fixed(
+            today.atStartOfDay(ZoneOffset.UTC).toInstant(),
+            ZoneOffset.UTC
+        )
     }
 
     private companion object {

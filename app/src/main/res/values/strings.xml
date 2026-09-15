@@ -16,4 +16,14 @@
     <string name="choose_photo">Choose from gallery</string>
     <string name="take_photo">Take photo</string>
     <string name="photo_save_error">Couldn\'t save photo</string>
+    <string name="close">Close</string>
+    <string name="birthday_today_name_is">Today %1$s is</string>
+    <plurals name="birthday_months_old">
+        <item quantity="one">month old!</item>
+        <item quantity="other">months old!</item>
+    </plurals>
+    <plurals name="birthday_years_old">
+        <item quantity="one">year old!</item>
+        <item quantity="other">years old!</item>
+    </plurals>
 </resources>
