@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -29,8 +30,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -42,6 +45,7 @@ import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.toUpperCase
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -57,7 +61,11 @@ import coil3.size.Precision
 import coil3.size.Size
 import com.dustinbluck.nanit.R
 import com.dustinbluck.nanit.deps.NanitDeps
+import com.dustinbluck.nanit.ui.photo.EditPhotoSheet
+import com.dustinbluck.nanit.ui.photo.PhotoEditState
+import com.dustinbluck.nanit.ui.photo.rememberPhotoPicker
 import java.io.File
+import kotlin.math.sqrt
 
 @Composable
 fun BirthdayScreen(
@@ -72,6 +80,8 @@ fun BirthdayScreen(
     }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val photoEditState by viewModel.photoEditState.collectAsStateWithLifecycle()
+    val photoPicker = rememberPhotoPicker(onPhotoPicked = viewModel::savePhoto)
     val modeResources = BirthdayModeResources.of(mode)
     val context = LocalPlatformContext.current
     val displayWidth = LocalResources.current.displayMetrics.widthPixels
@@ -107,8 +117,19 @@ fun BirthdayScreen(
         modeResources = modeResources,
         uiState = contentState,
         backgroundPainter = backgroundPainter,
-        onCloseClick = onCloseClick
+        onCloseClick = onCloseClick,
+        onEditPhotoClick = viewModel::editPhoto
     )
+    val photoEdit = photoEditState
+    if (photoEdit is PhotoEditState.Open && !photoEdit.isSaving) {
+        EditPhotoSheet(
+            photoPicker = photoPicker,
+            canRemovePhoto = (uiState as? BirthdayUiState.Loaded)?.photo != null,
+            saveFailed = photoEdit.saveFailed,
+            onRemovePhotoClick = viewModel::clearPhoto,
+            onDismiss = viewModel::cancelPhotoEdit
+        )
+    }
 }
 
 @Composable
@@ -116,7 +137,8 @@ private fun BirthdayContent(
     modeResources: BirthdayModeResources,
     uiState: BirthdayUiState,
     backgroundPainter: Painter,
-    onCloseClick: () -> Unit
+    onCloseClick: () -> Unit,
+    onEditPhotoClick: () -> Unit
 ) {
     val backgroundColor = colorResource(modeResources.backgroundColor)
     Scaffold(containerColor = backgroundColor) { innerPadding ->
@@ -125,7 +147,8 @@ private fun BirthdayContent(
                 modeResources = modeResources,
                 uiState = uiState,
                 backgroundPainter = backgroundPainter,
-                innerPadding = innerPadding
+                innerPadding = innerPadding,
+                onEditPhotoClick = onEditPhotoClick
             )
             IconButton(
                 onClick = onCloseClick,
@@ -148,7 +171,8 @@ private fun BirthdayStates(
     modeResources: BirthdayModeResources,
     uiState: BirthdayUiState,
     backgroundPainter: Painter,
-    innerPadding: PaddingValues
+    innerPadding: PaddingValues,
+    onEditPhotoClick: () -> Unit
 ) {
     AnimatedContent(
         targetState = uiState,
@@ -189,6 +213,7 @@ private fun BirthdayStates(
                     BirthdayDetails(
                         modeResources = modeResources,
                         uiState = state,
+                        onEditPhotoClick = onEditPhotoClick,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
@@ -228,6 +253,7 @@ private fun BirthdayError(modifier: Modifier = Modifier) {
 private fun BirthdayDetails(
     modeResources: BirthdayModeResources,
     uiState: BirthdayUiState.Loaded,
+    onEditPhotoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -257,7 +283,8 @@ private fun BirthdayDetails(
         ) {
             BabyPhoto(
                 modeResources = modeResources,
-                photo = uiState.photo
+                photo = uiState.photo,
+                onEditPhotoClick = onEditPhotoClick
             )
             Image(
                 painter = painterResource(R.drawable.nanit_logo),
@@ -333,11 +360,22 @@ private fun BirthdayTitle(
 private fun BabyPhoto(
     modeResources: BirthdayModeResources,
     photo: File?,
+    onEditPhotoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val defaultBaby = painterResource(modeResources.defaultBaby)
+    val ringPainter = painterResource(modeResources.photoRing)
+    val addPhotoPainter = painterResource(modeResources.addPhoto)
+    val ringSize = with(LocalDensity.current) {
+        ringPainter.intrinsicSize.width.toDp()
+    }
+    val photoSize = ringSize - RingStrokeWidth
+    val addPhotoOffset = calcRingOffsetFortyFiveDegrees(
+        ringSize = ringSize,
+        ringStrokeWidth = RingStrokeWidth
+    )
     Box(
-        modifier = modifier.size(207.dp),
+        modifier = modifier.size(ringSize),
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(
@@ -348,18 +386,46 @@ private fun BabyPhoto(
                 stringResource(R.string.baby_photo)
             },
             modifier = Modifier
-                .size(200.dp)
+                .size(photoSize)
                 .clip(CircleShape),
             fallback = defaultBaby,
             error = defaultBaby,
             contentScale = ContentScale.Crop
         )
         Image(
-            painter = painterResource(modeResources.photoRing),
+            painter = ringPainter,
             contentDescription = null,
             modifier = Modifier.fillMaxSize()
         )
+        IconButton(
+            onClick = onEditPhotoClick,
+            modifier = Modifier
+                .size(AddPhotoButtonSize)
+                .offset(
+                    x = addPhotoOffset,
+                    y = -addPhotoOffset
+                )
+        ) {
+            Icon(
+                painter = addPhotoPainter,
+                contentDescription = stringResource(R.string.edit_photo),
+                tint = Color.Unspecified
+            )
+        }
     }
+}
+
+private val RingStrokeWidth = 7.dp
+
+private val AddPhotoButtonSize = 48.dp
+
+private fun calcRingOffsetFortyFiveDegrees(
+    ringSize: Dp,
+    ringStrokeWidth: Dp
+): Dp {
+    val ringRadius = ringSize / 2                              // 103.5, the box edge
+    val strokeCenterRadius = ringRadius - ringStrokeWidth / 2  // 100.0, middle of the stroke
+    return strokeCenterRadius / sqrt(2f)                       // 70.71, x/y split at 45 degrees
 }
 
 private val NumberDrawables = listOf(

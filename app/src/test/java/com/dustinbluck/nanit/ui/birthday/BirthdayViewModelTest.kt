@@ -2,9 +2,11 @@ package com.dustinbluck.nanit.ui.birthday
 
 import app.cash.turbine.ReceiveTurbine
 import app.cash.turbine.test
+import com.dustinbluck.nanit.data.BabyRepository
 import com.dustinbluck.nanit.data.PreferencesBabyRepository
 import com.dustinbluck.nanit.deps.TestDependencyFactory
 import com.dustinbluck.nanit.logging.FakeLogger
+import com.dustinbluck.nanit.ui.photo.PhotoEditState
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,11 +49,7 @@ internal class BirthdayViewModelTest {
         )
         babyRepository = factory.babyRepository()
         logger = factory.logger()
-        subject = BirthdayViewModel(
-            babyRepository = babyRepository,
-            clock = factory.clock(TODAY),
-            logger = logger
-        )
+        subject = createSubject(babyRepository)
     }
 
     @After
@@ -211,6 +209,179 @@ internal class BirthdayViewModelTest {
         }
 
         assertThat(photo?.readBytes()).isEqualTo(OTHER_PHOTO)
+    }
+
+    @Test
+    fun photoEditIsClosedBeforeEditing() {
+        val photoEditState = subject.photoEditState.value
+
+        assertThat(photoEditState).isEqualTo(PhotoEditState.Closed)
+    }
+
+    @Test
+    fun editPhotoOpensPhotoEdit() {
+        subject.editPhoto()
+
+        val photoEditState = subject.photoEditState.value
+
+        assertThat(photoEditState).isEqualTo(
+            PhotoEditState.Open(
+                isSaving = false,
+                saveFailed = false
+            )
+        )
+    }
+
+    @Test
+    fun cancelPhotoEditClosesPhotoEdit() {
+        subject.editPhoto()
+        subject.cancelPhotoEdit()
+
+        val photoEditState = subject.photoEditState.value
+
+        assertThat(photoEditState).isEqualTo(PhotoEditState.Closed)
+    }
+
+    @Test
+    fun savePhotoStoresPhoto() = testScope.runTest {
+        subject.editPhoto()
+        subject.savePhoto(PHOTO::inputStream)
+
+        val photo = babyRepository.baby.first().photo
+
+        assertThat(photo?.readBytes()).isEqualTo(PHOTO)
+    }
+
+    @Test
+    fun savePhotoClosesPhotoEdit() = testScope.runTest {
+        subject.editPhoto()
+        subject.savePhoto(PHOTO::inputStream)
+
+        val photoEditState = subject.photoEditState.value
+
+        assertThat(photoEditState).isEqualTo(PhotoEditState.Closed)
+    }
+
+    @Test
+    fun savePhotoStoresPhotoWhenPhotoEditIsClosed() = testScope.runTest {
+        subject.savePhoto(PHOTO::inputStream)
+
+        val photo = babyRepository.baby.first().photo
+
+        assertThat(photo?.readBytes()).isEqualTo(PHOTO)
+    }
+
+    @Test
+    fun clearPhotoRemovesPhoto() = testScope.runTest {
+        babyRepository.setPhoto(PHOTO::inputStream)
+        subject.editPhoto()
+        subject.clearPhoto()
+
+        val photo = babyRepository.baby.first().photo
+
+        assertThat(photo).isNull()
+    }
+
+    @Test
+    fun clearPhotoClosesPhotoEdit() = testScope.runTest {
+        babyRepository.setPhoto(PHOTO::inputStream)
+        subject.editPhoto()
+        subject.clearPhoto()
+
+        val photoEditState = subject.photoEditState.value
+
+        assertThat(photoEditState).isEqualTo(PhotoEditState.Closed)
+    }
+
+    @Test
+    fun failedSavePhotoKeepsPhotoEditOpenWithError() = testScope.runTest {
+        subject = createSubject(factory.failingBabyRepository(babyRepository))
+        subject.editPhoto()
+        subject.savePhoto(PHOTO::inputStream)
+
+        val photoEditState = subject.photoEditState.value
+
+        assertThat(photoEditState).isEqualTo(
+            PhotoEditState.Open(
+                isSaving = false,
+                saveFailed = true
+            )
+        )
+    }
+
+    @Test
+    fun failedSavePhotoIsLogged() = testScope.runTest {
+        subject = createSubject(factory.failingBabyRepository(babyRepository))
+        subject.editPhoto()
+        subject.savePhoto(PHOTO::inputStream)
+
+        val entry = logger.entries.single()
+
+        assertThat(entry.level).isEqualTo(FakeLogger.Level.ERROR)
+    }
+
+    @Test
+    fun failedClearPhotoKeepsPhotoEditOpenWithError() = testScope.runTest {
+        subject = createSubject(factory.failingBabyRepository(babyRepository))
+        subject.editPhoto()
+        subject.clearPhoto()
+
+        val photoEditState = subject.photoEditState.value
+
+        assertThat(photoEditState).isEqualTo(
+            PhotoEditState.Open(
+                isSaving = false,
+                saveFailed = true
+            )
+        )
+    }
+
+    @Test
+    fun failedClearPhotoIsLogged() = testScope.runTest {
+        subject = createSubject(factory.failingBabyRepository(babyRepository))
+        subject.editPhoto()
+        subject.clearPhoto()
+
+        val entry = logger.entries.single()
+
+        assertThat(entry.level).isEqualTo(FakeLogger.Level.ERROR)
+    }
+
+    @Test
+    fun photoEditIsSavingWhilePhotoIsWritten() = testScope.runTest {
+        subject = createSubject(factory.pausableBabyRepository(babyRepository))
+        subject.editPhoto()
+        subject.savePhoto(PHOTO::inputStream)
+
+        val photoEditState = subject.photoEditState.value
+
+        assertThat(photoEditState).isEqualTo(
+            PhotoEditState.Open(
+                isSaving = true,
+                saveFailed = false
+            )
+        )
+    }
+
+    @Test
+    fun savePhotoIsIgnoredWhileSaving() = testScope.runTest {
+        val repository = factory.pausableBabyRepository(babyRepository)
+        subject = createSubject(repository)
+        subject.editPhoto()
+        subject.savePhoto(PHOTO::inputStream)
+        subject.savePhoto(PHOTO::inputStream)
+
+        val writeCount = repository.writeCount
+
+        assertThat(writeCount).isEqualTo(1)
+    }
+
+    private fun createSubject(repository: BabyRepository): BirthdayViewModel {
+        return BirthdayViewModel(
+            babyRepository = repository,
+            clock = factory.clock(TODAY),
+            logger = logger
+        )
     }
 
     private suspend fun ReceiveTurbine<BirthdayUiState>.awaitLoaded(): BirthdayUiState.Loaded {
