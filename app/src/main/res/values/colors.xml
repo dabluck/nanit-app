@@ -1,5 +1,6 @@
 <resources>
     <color name="nanit_blue">#394562</color>
+    <color name="nanit_coral">#EF7B7B</color>
     <color name="fox_background">#C5E8DF</color>
     <color name="fox_accent">#6FC5AF</color>
     <color name="fox_accent_light">#A9DCCF</color>

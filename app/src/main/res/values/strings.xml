@@ -18,6 +18,7 @@
     <string name="remove_photo">Remove photo</string>
     <string name="photo_save_error">Couldn\'t update photo</string>
     <string name="close">Close</string>
+    <string name="share_birthday">Share the news</string>
     <string name="birthday_today_name_is">Today %1$s is</string>
     <plurals name="birthday_months_old">
         <item quantity="one">month old!</item>

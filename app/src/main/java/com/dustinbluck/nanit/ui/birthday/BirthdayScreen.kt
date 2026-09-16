@@ -12,12 +12,15 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
@@ -64,6 +67,7 @@ import com.dustinbluck.nanit.deps.NanitDeps
 import com.dustinbluck.nanit.ui.photo.EditPhotoSheet
 import com.dustinbluck.nanit.ui.photo.PhotoEditState
 import com.dustinbluck.nanit.ui.photo.rememberPhotoPicker
+import com.dustinbluck.nanit.ui.theme.NanitButtonDefaults
 import java.io.File
 import kotlin.math.sqrt
 
@@ -119,7 +123,8 @@ fun BirthdayScreen(
         uiState = contentState,
         backgroundPainter = backgroundPainter,
         onCloseClick = onCloseClick,
-        onEditPhotoClick = viewModel::editPhoto
+        onEditPhotoClick = viewModel::editPhoto,
+        onShareClick = {}
     )
     val photoEdit = photoEditState
     if (photoEdit is PhotoEditState.Open && !photoEdit.isSaving) {
@@ -139,7 +144,8 @@ private fun BirthdayContent(
     uiState: BirthdayUiState,
     backgroundPainter: Painter,
     onCloseClick: () -> Unit,
-    onEditPhotoClick: () -> Unit
+    onEditPhotoClick: () -> Unit,
+    onShareClick: () -> Unit
 ) {
     val backgroundColor = colorResource(modeResources.backgroundColor)
     Scaffold(containerColor = backgroundColor) { innerPadding ->
@@ -149,7 +155,8 @@ private fun BirthdayContent(
                 uiState = uiState,
                 backgroundPainter = backgroundPainter,
                 innerPadding = innerPadding,
-                onEditPhotoClick = onEditPhotoClick
+                onEditPhotoClick = onEditPhotoClick,
+                onShareClick = onShareClick
             )
             IconButton(
                 onClick = onCloseClick,
@@ -173,7 +180,8 @@ private fun BirthdayStates(
     uiState: BirthdayUiState,
     backgroundPainter: Painter,
     innerPadding: PaddingValues,
-    onEditPhotoClick: () -> Unit
+    onEditPhotoClick: () -> Unit,
+    onShareClick: () -> Unit
 ) {
     AnimatedContent(
         targetState = uiState,
@@ -215,6 +223,7 @@ private fun BirthdayStates(
                         modeResources = modeResources,
                         uiState = state,
                         onEditPhotoClick = onEditPhotoClick,
+                        onShareClick = onShareClick,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
@@ -255,6 +264,7 @@ private fun BirthdayDetails(
     modeResources: BirthdayModeResources,
     uiState: BirthdayUiState.Loaded,
     onEditPhotoClick: () -> Unit,
+    onShareClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -292,7 +302,41 @@ private fun BirthdayDetails(
                 contentDescription = stringResource(R.string.app_name)
             )
         }
-        Spacer(modifier = Modifier.weight(1f))
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            ShareButton(onClick = onShareClick)
+        }
+    }
+}
+
+@Composable
+private fun ShareButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        shapes = ButtonDefaults.shapes(),
+        modifier = modifier.heightIn(NanitButtonDefaults.ContainerHeight),
+        elevation = null,
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = colorResource(R.color.nanit_coral),
+            contentColor = Color.White
+        ),
+        contentPadding = NanitButtonDefaults.ContentPadding
+    ) {
+        Text(
+            text = stringResource(R.string.share_birthday),
+            style = NanitButtonDefaults.TextStyle
+        )
+        Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+        Icon(
+            painter = painterResource(R.drawable.ic_share),
+            contentDescription = null,
+            modifier = Modifier.size(NanitButtonDefaults.IconSize)
+        )
     }
 }
 

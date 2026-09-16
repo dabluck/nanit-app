@@ -64,6 +64,7 @@ import com.dustinbluck.nanit.deps.NanitDeps
 import com.dustinbluck.nanit.ui.photo.EditPhotoSheet
 import com.dustinbluck.nanit.ui.photo.PhotoEditState
 import com.dustinbluck.nanit.ui.photo.rememberPhotoPicker
+import com.dustinbluck.nanit.ui.theme.NanitButtonDefaults
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -259,13 +260,13 @@ private fun BabyDetails(
         Button(
             onClick = onBirthdayClick,
             shapes = ButtonDefaults.shapes(),
-            modifier = Modifier.heightIn(ButtonDefaults.MediumContainerHeight),
+            modifier = Modifier.heightIn(NanitButtonDefaults.ContainerHeight),
             enabled = isBirthdayEnabled,
-            contentPadding = ButtonDefaults.contentPaddingFor(ButtonDefaults.MediumContainerHeight)
+            contentPadding = NanitButtonDefaults.ContentPadding
         ) {
             Text(
                 text = stringResource(R.string.show_birthday_screen),
-                style = ButtonDefaults.textStyleFor(ButtonDefaults.MediumContainerHeight)
+                style = NanitButtonDefaults.TextStyle
             )
         }
     }
