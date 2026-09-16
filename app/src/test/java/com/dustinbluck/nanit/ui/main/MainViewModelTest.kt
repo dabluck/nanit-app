@@ -5,6 +5,7 @@ import com.dustinbluck.nanit.data.BabyRepository
 import com.dustinbluck.nanit.data.PreferencesBabyRepository
 import com.dustinbluck.nanit.deps.TestDependencyFactory
 import com.dustinbluck.nanit.logging.FakeLogger
+import com.dustinbluck.nanit.ui.photo.PhotoEditState
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -396,11 +397,10 @@ internal class MainViewModelTest {
     fun editPhotoOpensPhotoEdit() = testScope.runTest {
         subject.editPhoto()
 
-        val uiState = awaitLoadResult()
+        val photoEditState = subject.photoEditState.value
 
-        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
-            EditState.Open(
-                field = EditField.PHOTO,
+        assertThat(photoEditState).isEqualTo(
+            PhotoEditState.Open(
                 isSaving = false,
                 saveFailed = false
             )
@@ -408,190 +408,24 @@ internal class MainViewModelTest {
     }
 
     @Test
-    fun savePhotoStoresPhoto() = testScope.runTest {
-        subject.editPhoto()
-        subject.savePhoto(PHOTO::inputStream)
-
-        val photo = babyRepository.baby.first().photo
-
-        assertThat(photo?.readBytes()).isEqualTo(PHOTO)
-    }
-
-    @Test
-    fun savePhotoClosesEdit() = testScope.runTest {
-        subject.editPhoto()
-        subject.savePhoto(PHOTO::inputStream)
-
-        val uiState = awaitLoadResult()
-
-        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
-    }
-
-    @Test
-    fun savePhotoStoresPhotoWhenEditIsClosed() = testScope.runTest {
-        subject.savePhoto(PHOTO::inputStream)
-
-        val photo = babyRepository.baby.first().photo
-
-        assertThat(photo?.readBytes()).isEqualTo(PHOTO)
-    }
-
-    @Test
-    fun savePhotoIsIgnoredWhenNameEditIsOpen() = testScope.runTest {
+    fun savePhotoStoresPhotoWhenNameEditIsOpen() = testScope.runTest {
         subject.editName()
         subject.savePhoto(PHOTO::inputStream)
 
         val baby = babyRepository.baby.first()
 
-        assertThat(baby.photo).isNull()
+        assertThat(baby.photo?.readBytes()).isEqualTo(PHOTO)
     }
 
     @Test
-    fun savePhotoFromCameraStoresPhoto() = testScope.runTest {
-        val photoManager = factory.photoManager()
-        photoManager.prepareCameraPhoto()
-        factory.cameraPhotoFile().writeBytes(PHOTO)
-        subject.editPhoto()
-        subject.savePhoto(photoManager::openCameraPhoto)
-
-        val photo = babyRepository.baby.first().photo
-
-        assertThat(photo?.readBytes()).isEqualTo(PHOTO)
-    }
-
-    @Test
-    fun savePhotoFromCameraFailsWhenCameraWroteNoPhoto() = testScope.runTest {
-        val photoManager = factory.photoManager()
-        photoManager.prepareCameraPhoto()
-        factory.cameraPhotoFile().writeBytes(PHOTO)
-        photoManager.prepareCameraPhoto()
-        subject.editPhoto()
-        subject.savePhoto(photoManager::openCameraPhoto)
-
-        val uiState = awaitLoadResult()
-
-        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
-            EditState.Open(
-                field = EditField.PHOTO,
-                isSaving = false,
-                saveFailed = true
-            )
-        )
-    }
-
-    @Test
-    fun clearPhotoRemovesPhoto() = testScope.runTest {
-        babyRepository.setPhoto(PHOTO::inputStream)
-        subject.editPhoto()
-        subject.clearPhoto()
-
-        val baby = babyRepository.baby.first()
-
-        assertThat(baby.photo).isNull()
-    }
-
-    @Test
-    fun clearPhotoClosesEdit() = testScope.runTest {
-        babyRepository.setPhoto(PHOTO::inputStream)
-        subject.editPhoto()
-        subject.clearPhoto()
-
-        val uiState = awaitLoadResult()
-
-        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
-    }
-
-    @Test
-    fun clearPhotoRemovesPhotoWhenEditIsClosed() = testScope.runTest {
-        babyRepository.setPhoto(PHOTO::inputStream)
-        subject.clearPhoto()
-
-        val baby = babyRepository.baby.first()
-
-        assertThat(baby.photo).isNull()
-    }
-
-    @Test
-    fun clearPhotoIsIgnoredWhenNameEditIsOpen() = testScope.runTest {
+    fun clearPhotoRemovesPhotoWhenNameEditIsOpen() = testScope.runTest {
         babyRepository.setPhoto(PHOTO::inputStream)
         subject.editName()
         subject.clearPhoto()
 
         val photo = babyRepository.baby.first().photo
 
-        assertThat(photo?.readBytes()).isEqualTo(PHOTO)
-    }
-
-    @Test
-    fun failedClearPhotoKeepsPhotoEditOpenWithError() = testScope.runTest {
-        subject = createSubject(factory.failingBabyRepository(babyRepository))
-        subject.editPhoto()
-        subject.clearPhoto()
-
-        val uiState = awaitLoadResult()
-
-        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
-            EditState.Open(
-                field = EditField.PHOTO,
-                isSaving = false,
-                saveFailed = true
-            )
-        )
-    }
-
-    @Test
-    fun failedClearPhotoIsLogged() = testScope.runTest {
-        subject = createSubject(factory.failingBabyRepository(babyRepository))
-        subject.editPhoto()
-        subject.clearPhoto()
-
-        val entry = logger.entries.single()
-
-        assertThat(entry.level).isEqualTo(FakeLogger.Level.ERROR)
-    }
-
-    @Test
-    fun failedSavePhotoKeepsPhotoEditOpenWithError() = testScope.runTest {
-        subject = createSubject(factory.failingBabyRepository(babyRepository))
-        subject.editPhoto()
-        subject.savePhoto(PHOTO::inputStream)
-
-        val uiState = awaitLoadResult()
-
-        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
-            EditState.Open(
-                field = EditField.PHOTO,
-                isSaving = false,
-                saveFailed = true
-            )
-        )
-    }
-
-    @Test
-    fun failedSavePhotoWhenEditIsClosedOpensPhotoEditWithError() = testScope.runTest {
-        subject = createSubject(factory.failingBabyRepository(babyRepository))
-        subject.savePhoto(PHOTO::inputStream)
-
-        val uiState = awaitLoadResult()
-
-        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
-            EditState.Open(
-                field = EditField.PHOTO,
-                isSaving = false,
-                saveFailed = true
-            )
-        )
-    }
-
-    @Test
-    fun failedSavePhotoIsLogged() = testScope.runTest {
-        subject = createSubject(factory.failingBabyRepository(babyRepository))
-        subject.editPhoto()
-        subject.savePhoto(PHOTO::inputStream)
-
-        val entry = logger.entries.single()
-
-        assertThat(entry.level).isEqualTo(FakeLogger.Level.ERROR)
+        assertThat(photo).isNull()
     }
 
     @Test

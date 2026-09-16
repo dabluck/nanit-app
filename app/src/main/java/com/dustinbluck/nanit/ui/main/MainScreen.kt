@@ -62,6 +62,7 @@ import com.dustinbluck.nanit.R
 import com.dustinbluck.nanit.data.Baby
 import com.dustinbluck.nanit.deps.NanitDeps
 import com.dustinbluck.nanit.ui.photo.EditPhotoSheet
+import com.dustinbluck.nanit.ui.photo.PhotoEditState
 import com.dustinbluck.nanit.ui.photo.rememberPhotoPicker
 import java.time.Clock
 import java.time.Instant
@@ -87,6 +88,7 @@ fun MainScreen(
         LocalDate.now(clock)
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val photoEditState by viewModel.photoEditState.collectAsStateWithLifecycle()
     val photoPicker = rememberPhotoPicker(onPhotoPicked = viewModel::savePhoto)
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
@@ -153,18 +155,17 @@ fun MainScreen(
                             onDismiss = viewModel::cancelEdit
                         )
 
-                        EditField.PHOTO -> {
-                            if (!editState.isSaving) {
-                                EditPhotoSheet(
-                                    photoPicker = photoPicker,
-                                    canRemovePhoto = state.baby.photo != null,
-                                    saveFailed = editState.saveFailed,
-                                    onRemovePhotoClick = viewModel::clearPhoto,
-                                    onDismiss = viewModel::cancelEdit
-                                )
-                            }
-                        }
                     }
+                }
+                val photoEdit = photoEditState
+                if (photoEdit is PhotoEditState.Open && !photoEdit.isSaving) {
+                    EditPhotoSheet(
+                        photoPicker = photoPicker,
+                        canRemovePhoto = state.baby.photo != null,
+                        saveFailed = photoEdit.saveFailed,
+                        onRemovePhotoClick = viewModel::clearPhoto,
+                        onDismiss = viewModel::cancelPhotoEdit
+                    )
                 }
             }
         }

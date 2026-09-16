@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.dustinbluck.nanit.data.Baby
 import com.dustinbluck.nanit.data.BabyRepository
 import com.dustinbluck.nanit.logging.Logger
+import com.dustinbluck.nanit.ui.photo.PhotoEditState
+import com.dustinbluck.nanit.ui.photo.PhotoEditor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +26,14 @@ class MainViewModel(
 ) : ViewModel() {
 
     private val editState = MutableStateFlow<EditState>(EditState.Closed)
+
+    private val photoEditor = PhotoEditor(
+        babyRepository = babyRepository,
+        logger = logger,
+        scope = viewModelScope
+    )
+
+    val photoEditState: StateFlow<PhotoEditState> = photoEditor.state
 
     val uiState: StateFlow<MainUiState> = combine<Baby, EditState, MainUiState>(
         babyRepository.baby,
@@ -57,11 +67,15 @@ class MainViewModel(
     }
 
     fun editPhoto() {
-        edit(EditField.PHOTO)
+        photoEditor.open()
     }
 
     fun cancelEdit() {
         editState.value = EditState.Closed
+    }
+
+    fun cancelPhotoEdit() {
+        photoEditor.cancel()
     }
 
     fun saveName(name: String) {
@@ -88,27 +102,11 @@ class MainViewModel(
     }
 
     fun savePhoto(openPhoto: () -> InputStream) {
-        if (editState.value == EditState.Closed) {
-            edit(EditField.PHOTO)
-        }
-        save(
-            field = EditField.PHOTO,
-            errorLogMessage = PHOTO_SAVE_ERROR_LOG_MESSAGE
-        ) {
-            babyRepository.setPhoto(openPhoto)
-        }
+        photoEditor.savePhoto(openPhoto)
     }
 
     fun clearPhoto() {
-        if (editState.value == EditState.Closed) {
-            edit(EditField.PHOTO)
-        }
-        save(
-            field = EditField.PHOTO,
-            errorLogMessage = PHOTO_CLEAR_ERROR_LOG_MESSAGE
-        ) {
-            babyRepository.clearPhoto()
-        }
+        photoEditor.clearPhoto()
     }
 
     private fun edit(field: EditField) {
@@ -163,7 +161,5 @@ class MainViewModel(
         private const val LOAD_ERROR_LOG_MESSAGE = "Failed to load baby"
         private const val NAME_SAVE_ERROR_LOG_MESSAGE = "Failed to save baby name"
         private const val BIRTHDAY_SAVE_ERROR_LOG_MESSAGE = "Failed to save baby birthday"
-        private const val PHOTO_SAVE_ERROR_LOG_MESSAGE = "Failed to save baby photo"
-        private const val PHOTO_CLEAR_ERROR_LOG_MESSAGE = "Failed to clear baby photo"
     }
 }
