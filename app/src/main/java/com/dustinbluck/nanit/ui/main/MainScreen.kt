@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -62,7 +63,10 @@ import com.dustinbluck.nanit.data.Baby
 import com.dustinbluck.nanit.deps.NanitDeps
 import com.dustinbluck.nanit.ui.photo.EditPhotoSheet
 import com.dustinbluck.nanit.ui.photo.rememberPhotoPicker
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -70,13 +74,18 @@ import java.time.format.FormatStyle
 @Composable
 fun MainScreen(
     onBirthdayClick: () -> Unit,
+    clock: Clock = NanitDeps.instance.clock,
     viewModel: MainViewModel = viewModel {
         MainViewModel(
             babyRepository = NanitDeps.instance.babyRepository,
+            clock = NanitDeps.instance.clock,
             logger = NanitDeps.instance.logger
         )
     }
 ) {
+    val today = remember(clock) {
+        LocalDate.now(clock)
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val photoPicker = rememberPhotoPicker(onPhotoPicked = viewModel::savePhoto)
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -138,6 +147,7 @@ fun MainScreen(
 
                         EditField.BIRTHDAY -> EditBirthdayDialog(
                             birthday = state.baby.birthday,
+                            today = today,
                             editState = editState,
                             onSave = viewModel::saveBirthday,
                             onDismiss = viewModel::cancelEdit
@@ -354,13 +364,20 @@ private fun EditNameDialog(
 @Composable
 private fun EditBirthdayDialog(
     birthday: LocalDate?,
+    today: LocalDate,
     editState: EditState.Open,
     onSave: (LocalDate) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // Future birthdays can currently be picked and saved. We should probably disallow them
+    val selectableDates = remember(today) {
+        PastDates(today)
+    }
+
     @SuppressLint("NewApi")
-    val datePickerState = rememberDatePickerState(initialSelectedDate = birthday)
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDate = birthday,
+        selectableDates = selectableDates
+    )
 
     @SuppressLint("NewApi")
     val selectedDate = datePickerState.getSelectedDate()
@@ -393,5 +410,18 @@ private fun EditBirthdayDialog(
                 style = MaterialTheme.typography.bodyMedium
             )
         }
+    }
+}
+
+private class PastDates(private val today: LocalDate) : SelectableDates {
+    override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+        val date = Instant.ofEpochMilli(utcTimeMillis)
+            .atZone(ZoneOffset.UTC)
+            .toLocalDate()
+        return !date.isAfter(today)
+    }
+
+    override fun isSelectableYear(year: Int): Boolean {
+        return year <= today.year
     }
 }

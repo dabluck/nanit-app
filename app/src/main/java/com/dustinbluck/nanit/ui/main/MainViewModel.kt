@@ -14,10 +14,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.InputStream
+import java.time.Clock
 import java.time.LocalDate
 
 class MainViewModel(
     private val babyRepository: BabyRepository,
+    private val clock: Clock,
     private val logger: Logger
 ) : ViewModel() {
 
@@ -75,11 +77,13 @@ class MainViewModel(
     }
 
     fun saveBirthday(birthday: LocalDate) {
-        save(
-            field = EditField.BIRTHDAY,
-            errorLogMessage = BIRTHDAY_SAVE_ERROR_LOG_MESSAGE
-        ) {
-            babyRepository.setBirthday(birthday)
+        if (!birthday.isAfter(LocalDate.now(clock))) {
+            save(
+                field = EditField.BIRTHDAY,
+                errorLogMessage = BIRTHDAY_SAVE_ERROR_LOG_MESSAGE
+            ) {
+                babyRepository.setBirthday(birthday)
+            }
         }
     }
 

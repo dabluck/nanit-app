@@ -289,6 +289,42 @@ internal class MainViewModelTest {
     }
 
     @Test
+    fun saveBirthdayStoresTodaysBirthday() = testScope.runTest {
+        subject.editBirthday()
+        subject.saveBirthday(TODAY)
+
+        val baby = babyRepository.baby.first()
+
+        assertThat(baby.birthday).isEqualTo(TODAY)
+    }
+
+    @Test
+    fun futureBirthdayIsNotStored() = testScope.runTest {
+        subject.editBirthday()
+        subject.saveBirthday(FUTURE_BIRTHDAY)
+
+        val baby = babyRepository.baby.first()
+
+        assertThat(baby.birthday).isNull()
+    }
+
+    @Test
+    fun futureBirthdayKeepsEditOpen() = testScope.runTest {
+        subject.editBirthday()
+        subject.saveBirthday(FUTURE_BIRTHDAY)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
+            EditState.Open(
+                field = EditField.BIRTHDAY,
+                isSaving = false,
+                saveFailed = false
+            )
+        )
+    }
+
+    @Test
     fun saveBirthdayClosesEdit() = testScope.runTest {
         subject.editBirthday()
         subject.saveBirthday(BIRTHDAY)
@@ -609,6 +645,7 @@ internal class MainViewModelTest {
     private fun createSubject(repository: BabyRepository): MainViewModel {
         return MainViewModel(
             babyRepository = repository,
+            clock = factory.clock(TODAY),
             logger = logger
         )
     }
@@ -627,6 +664,16 @@ internal class MainViewModelTest {
             2025,
             3,
             14
+        )
+        private val TODAY = LocalDate.of(
+            2025,
+            8,
+            20
+        )
+        private val FUTURE_BIRTHDAY = LocalDate.of(
+            2025,
+            8,
+            21
         )
         private val PHOTO = byteArrayOf(
             1,
