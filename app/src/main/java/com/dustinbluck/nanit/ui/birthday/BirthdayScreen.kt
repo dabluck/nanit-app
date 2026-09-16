@@ -574,13 +574,18 @@ private val NumberDrawables = listOf(
     R.drawable.number_12
 )
 
+private val AgeNumberFallbackFontSize = 92.sp
+
 @Composable
 private fun AgeNumber(age: Int) {
     val numberDrawable = NumberDrawables.getOrNull(age)
     if (numberDrawable == null) {
         Text(
             text = age.toString(),
-            color = colorResource(R.color.nanit_blue)
+            color = colorResource(R.color.nanit_coral),
+            fontSize = AgeNumberFallbackFontSize,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
         )
     } else {
         Image(
