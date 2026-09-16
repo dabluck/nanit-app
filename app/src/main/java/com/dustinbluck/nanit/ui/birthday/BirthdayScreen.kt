@@ -87,7 +87,8 @@ fun BirthdayScreen(
     val displayWidth = LocalResources.current.displayMetrics.widthPixels
     val backgroundRequest = remember(
         context,
-        mode
+        mode,
+        displayWidth
     ) {
         // exact size since our images are pretty large and we only want to use the memory we need
         ImageRequest.Builder(context)
