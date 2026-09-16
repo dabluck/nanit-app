@@ -16,5 +16,6 @@ Things I did not invest in that I would look at more in a real app:
 - Did not test accessibility although tried to be mindful of it when developing
 - Dark mode / improve dynamic theme support
 - API 24-25 may not support the app icon or share features properly. Min sdk 26 feels defensible but just left this for now
+- Added portrait lock given designs and small scope, a real project would want to think about landscape
 
 Thanks!

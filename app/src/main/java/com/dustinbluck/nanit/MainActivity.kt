@@ -12,7 +12,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.toMutableStateList
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -37,7 +39,15 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             NanitTheme {
-                val backStack = remember {
+                val backStackSaver = listSaver<MutableList<Screen>, Screen>(
+                    save = { backStack ->
+                        backStack.toList()
+                    },
+                    restore = { saved ->
+                        saved.toMutableStateList()
+                    }
+                )
+                val backStack = rememberSaveable(saver = backStackSaver) {
                     mutableStateListOf<Screen>(Screen.Main)
                 }
                 NavDisplay(
