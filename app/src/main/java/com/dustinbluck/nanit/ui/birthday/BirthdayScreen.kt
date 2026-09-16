@@ -304,8 +304,10 @@ private fun BirthdayDetails(
         }
         Box(
             modifier = Modifier.weight(1f),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.BottomCenter
         ) {
+            // putting the share button on the bottom since it isn't present in Android Figma
+            // centering it on bottom 3rd covers the fox on many common screens
             ShareButton(onClick = onShareClick)
         }
     }
