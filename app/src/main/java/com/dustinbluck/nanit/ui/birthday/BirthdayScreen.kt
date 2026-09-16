@@ -1,5 +1,7 @@
 package com.dustinbluck.nanit.ui.birthday
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -124,7 +126,12 @@ fun BirthdayScreen(
         backgroundPainter = backgroundPainter,
         onCloseClick = onCloseClick,
         onEditPhotoClick = viewModel::editPhoto,
-        onShareClick = {}
+        onShareClick = {
+            shareBirthday(
+                context = context,
+                message = "Share placeholder"
+            )
+        }
     )
     val photoEdit = photoEditState
     if (photoEdit is PhotoEditState.Open && !photoEdit.isSaving) {
@@ -137,6 +144,22 @@ fun BirthdayScreen(
         )
     }
 }
+
+private fun shareBirthday(
+    context: Context,
+    message: String
+) {
+    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        type = ShareMimeType
+        putExtra(
+            Intent.EXTRA_TEXT,
+            message
+        )
+    }
+    context.startActivity(Intent.createChooser(shareIntent, null))
+}
+
+private const val ShareMimeType = "text/plain"
 
 @Composable
 private fun BirthdayContent(
