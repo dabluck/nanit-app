@@ -12,7 +12,7 @@ import org.junit.runner.RunWith
 import java.io.InputStream
 
 @RunWith(AndroidJUnit4::class)
-internal class CameraPhotoProviderTest {
+internal class PhotoManagerUriTest {
     private lateinit var contentResolver: ContentResolver
 
     private lateinit var subject: PhotoManager
