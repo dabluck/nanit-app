@@ -1,5 +1,6 @@
 package com.dustinbluck.nanit.logging
 
+// matches android.util.Log surface, even though we don't use them all
 interface Logger {
     fun v(
         tag: String,
