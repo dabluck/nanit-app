@@ -1,8 +1,10 @@
 package com.dustinbluck.nanit.ui.birthday
 
 import android.content.Context
-import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -30,13 +32,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
@@ -54,6 +63,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ShareCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
@@ -65,11 +75,18 @@ import coil3.size.Dimension
 import coil3.size.Precision
 import coil3.size.Size
 import com.dustinbluck.nanit.R
+import com.dustinbluck.nanit.data.PhotoManager
 import com.dustinbluck.nanit.deps.NanitDeps
+import com.dustinbluck.nanit.ui.capture.LocalCaptureAlpha
+import com.dustinbluck.nanit.ui.capture.hiddenInCapture
 import com.dustinbluck.nanit.ui.photo.EditPhotoSheet
 import com.dustinbluck.nanit.ui.photo.PhotoEditState
 import com.dustinbluck.nanit.ui.photo.rememberPhotoPicker
 import com.dustinbluck.nanit.ui.theme.NanitButtonDefaults
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.sqrt
 
@@ -77,6 +94,8 @@ import kotlin.math.sqrt
 fun BirthdayScreen(
     mode: BirthdayMode,
     onCloseClick: () -> Unit,
+    photoManager: PhotoManager = NanitDeps.instance.photoManager,
+    ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     viewModel: BirthdayViewModel = viewModel {
         BirthdayViewModel(
             babyRepository = NanitDeps.instance.babyRepository,
@@ -120,19 +139,51 @@ fun BirthdayScreen(
     } else {
         uiState
     }
-    BirthdayContent(
-        modeResources = modeResources,
-        uiState = contentState,
-        backgroundPainter = backgroundPainter,
-        onCloseClick = onCloseClick,
-        onEditPhotoClick = viewModel::editPhoto,
-        onShareClick = {
-            shareBirthday(
-                context = context,
-                message = "Share placeholder"
+    val graphicsLayer = rememberGraphicsLayer()
+    val captureScope = rememberCoroutineScope()
+    val captureAlpha = remember { Animatable(1f) }
+    CompositionLocalProvider(LocalCaptureAlpha provides captureAlpha.value) {
+        Box(
+            modifier = Modifier.drawWithContent {
+                graphicsLayer.record {
+                    this@drawWithContent.drawContent()
+                }
+                drawLayer(graphicsLayer)
+            }
+        ) {
+            BirthdayContent(
+                modeResources = modeResources,
+                uiState = contentState,
+                backgroundPainter = backgroundPainter,
+                onCloseClick = onCloseClick,
+                onEditPhotoClick = viewModel::editPhoto,
+                onShareClick = {
+                    captureScope.launch {
+                        // looks a little abrupt when the views just disappear so we fade them out a tiny bit
+                        captureAlpha.animateTo(
+                            targetValue = 0f,
+                            animationSpec = tween(CaptureFadeMillis)
+                        )
+                        awaitCapturedFrame()
+                        val card = graphicsLayer.toImageBitmap()
+                        captureAlpha.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(CaptureFadeMillis)
+                        )
+                        val cardUri = withContext(ioDispatcher) {
+                            photoManager.writeBirthdayCard(card.asAndroidBitmap())
+                        }
+                        if (cardUri != null) {
+                            shareBirthdayCard(
+                                context = context,
+                                cardUri = cardUri
+                            )
+                        }
+                    }
+                }
             )
         }
-    )
+    }
     val photoEdit = photoEditState
     if (photoEdit is PhotoEditState.Open && !photoEdit.isSaving) {
         EditPhotoSheet(
@@ -145,21 +196,24 @@ fun BirthdayScreen(
     }
 }
 
-private fun shareBirthday(
-    context: Context,
-    message: String
-) {
-    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-        type = ShareMimeType
-        putExtra(
-            Intent.EXTRA_TEXT,
-            message
-        )
-    }
-    context.startActivity(Intent.createChooser(shareIntent, null))
+private suspend fun awaitCapturedFrame() {
+    withFrameNanos { }
+    withFrameNanos { }
 }
 
-private const val ShareMimeType = "text/plain"
+private fun shareBirthdayCard(
+    context: Context,
+    cardUri: Uri
+) {
+    ShareCompat.IntentBuilder(context)
+        .setType(ShareMimeType)
+        .setStream(cardUri)
+        .startChooser()
+}
+
+private const val ShareMimeType = "image/png"
+
+private const val CaptureFadeMillis = 150
 
 @Composable
 private fun BirthdayContent(
@@ -187,6 +241,7 @@ private fun BirthdayContent(
                     .align(Alignment.TopStart)
                     .padding(innerPadding)
                     .padding(start = 4.dp)
+                    .hiddenInCapture()
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_close),
@@ -331,7 +386,10 @@ private fun BirthdayDetails(
         ) {
             // putting the share button on the bottom since it isn't present in Android Figma
             // centering it on bottom 3rd covers the fox on many common screens
-            ShareButton(onClick = onShareClick)
+            ShareButton(
+                onClick = onShareClick,
+                modifier = Modifier.hiddenInCapture()
+            )
         }
     }
 }
@@ -474,6 +532,7 @@ private fun BabyPhoto(
                     x = addPhotoOffset,
                     y = -addPhotoOffset
                 )
+                .hiddenInCapture()
         ) {
             Icon(
                 painter = addPhotoPainter,

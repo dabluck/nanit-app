@@ -3,4 +3,7 @@
     <cache-path
         name="camera_photo"
         path="camera_photo/" />
+    <cache-path
+        name="nanit_birthday_share"
+        path="nanit_birthday_share/" />
 </paths>
