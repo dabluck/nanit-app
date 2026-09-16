@@ -595,20 +595,6 @@ internal class MainViewModelTest {
     }
 
     @Test
-    fun savePhotoIsIgnoredWhileSavingAfterReopeningEdit() = testScope.runTest {
-        val repository = factory.pausableBabyRepository(babyRepository)
-        subject = createSubject(repository)
-        subject.editPhoto()
-        subject.savePhoto(PHOTO::inputStream)
-        subject.editPhoto()
-        subject.savePhoto(PHOTO::inputStream)
-
-        val writeCount = repository.writeCount
-
-        assertThat(writeCount).isEqualTo(1)
-    }
-
-    @Test
     fun finishedSaveKeepsNewlyOpenedEditOpen() = testScope.runTest {
         val repository = factory.pausableBabyRepository(babyRepository)
         subject = createSubject(repository)

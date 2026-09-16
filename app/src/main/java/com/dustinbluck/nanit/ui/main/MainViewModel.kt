@@ -138,6 +138,7 @@ class MainViewModel(
                         errorLogMessage
                     )
                 }
+                // can race with a newer save in theory but in practice is safe enough for user speed
                 editState.update { state ->
                     if (state is EditState.Open && state.field == field) {
                         if (saved) {

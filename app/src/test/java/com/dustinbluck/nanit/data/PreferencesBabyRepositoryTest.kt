@@ -262,6 +262,23 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
+    fun concurrentSetPhotoLeavesOnlyTheStoredPhoto() = testScope.runTest {
+        listOf(
+            launch {
+                subject.setPhoto(PHOTO::inputStream)
+            },
+            launch {
+                subject.setPhoto(OTHER_PHOTO::inputStream)
+            }
+        ).joinAll()
+        val photo = subject.baby.first().photo
+
+        val photos = factory.babyPhotoDirectory().list()
+
+        assertThat(photos).asList().containsExactly(photo?.name)
+    }
+
+    @Test
     fun setNameReturnsFalseWhenPreferencesCannotBeWritten() = testScope.runTest {
         subject = factory.babyRepository(dataStore = factory.unwritableBabyDataStore())
 

@@ -89,6 +89,7 @@ class BirthdayViewModel(
                         errorLogMessage
                     )
                 }
+                // same potential race issue
                 photoEdit.update { state ->
                     if (state is PhotoEditState.Open) {
                         if (saved) {
