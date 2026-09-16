@@ -8,6 +8,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,14 +23,11 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
@@ -114,7 +111,6 @@ fun BirthdayScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BirthdayContent(
     modeResources: BirthdayModeResources,
@@ -123,69 +119,81 @@ private fun BirthdayContent(
     onCloseClick: () -> Unit
 ) {
     val backgroundColor = colorResource(modeResources.backgroundColor)
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                },
-                navigationIcon = {
-                    IconButton(onClick = onCloseClick) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_close),
-                            contentDescription = stringResource(R.string.close)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+    Scaffold(containerColor = backgroundColor) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            BirthdayStates(
+                modeResources = modeResources,
+                uiState = uiState,
+                backgroundPainter = backgroundPainter,
+                innerPadding = innerPadding
             )
-        },
-        containerColor = backgroundColor
-    ) { innerPadding ->
-        AnimatedContent(
-            targetState = uiState,
-            modifier = Modifier.fillMaxSize(),
-            transitionSpec = {
-                fadeIn() togetherWith fadeOut()
-            },
-            contentKey = { state ->
-                state::class
+            IconButton(
+                onClick = onCloseClick,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(innerPadding)
+                    .padding(start = 4.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_close),
+                    contentDescription = stringResource(R.string.close)
+                )
             }
-        ) { state ->
-            when (state) {
-                BirthdayUiState.Loading -> {
-                    BirthdayLoading(
+        }
+    }
+}
+
+@Composable
+private fun BirthdayStates(
+    modeResources: BirthdayModeResources,
+    uiState: BirthdayUiState,
+    backgroundPainter: Painter,
+    innerPadding: PaddingValues
+) {
+    AnimatedContent(
+        targetState = uiState,
+        modifier = Modifier.fillMaxSize(),
+        transitionSpec = {
+            fadeIn() togetherWith fadeOut()
+        },
+        contentKey = { state ->
+            state::class
+        }
+    ) { state ->
+        when (state) {
+            BirthdayUiState.Loading -> {
+                BirthdayLoading(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                )
+            }
+
+            BirthdayUiState.Error -> {
+                BirthdayError(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                )
+            }
+
+            is BirthdayUiState.Loaded -> {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Image(
+                        painter = backgroundPainter,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        alignment = Alignment.BottomCenter,
+                        contentScale = ContentScale.FillWidth
+                    )
+                    BirthdayDetails(
+                        modeResources = modeResources,
+                        uiState = state,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
+                            .padding(horizontal = 50.dp)
                     )
-                }
-
-                BirthdayUiState.Error -> {
-                    BirthdayError(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                    )
-                }
-
-                is BirthdayUiState.Loaded -> {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Image(
-                            painter = backgroundPainter,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            alignment = Alignment.BottomCenter,
-                            contentScale = ContentScale.FillWidth
-                        )
-                        BirthdayDetails(
-                            modeResources = modeResources,
-                            uiState = state,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(innerPadding)
-                                .padding(horizontal = 50.dp)
-                        )
-                    }
                 }
             }
         }
@@ -229,13 +237,16 @@ private fun BirthdayDetails(
         Box(
             modifier = Modifier
                 .weight(1f)
-                .padding(bottom = 15.dp),
+                .padding(
+                    top = 20.dp,
+                    bottom = 15.dp
+                ),
             contentAlignment = Alignment.Center
         ) {
             BirthdayTitle(
                 uiState = uiState,
                 modifier = Modifier.wrapContentHeight(
-                    align = centerUntilOverflowThenPinToBottom(),
+                    align = Alignment.Bottom,
                     unbounded = true
                 )
             )
@@ -254,17 +265,6 @@ private fun BirthdayDetails(
             )
         }
         Spacer(modifier = Modifier.weight(1f))
-    }
-}
-
-private fun centerUntilOverflowThenPinToBottom(): Alignment.Vertical {
-    return Alignment.Vertical { size, space ->
-        val centered = (space - size) / 2
-        val bottomPinned = space - size
-        minOf(
-            centered,
-            bottomPinned
-        )
     }
 }
 
