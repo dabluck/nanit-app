@@ -9,11 +9,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.maxLength
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -23,12 +27,11 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -38,7 +41,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.getSelectedDate
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -71,6 +73,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlin.math.sqrt
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -197,7 +200,7 @@ private fun BabyDetails(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Box {
+        Box(contentAlignment = Alignment.Center) {
             AsyncImage(
                 model = baby.photo,
                 contentDescription = if (baby.photo == null) {
@@ -206,14 +209,17 @@ private fun BabyDetails(
                     stringResource(R.string.baby_photo)
                 },
                 modifier = Modifier
-                    .size(200.dp)
-                    .clip(MaterialShapes.Cookie9Sided.toShape())
+                    .size(BabyPhotoSize)
+                    .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentScale = ContentScale.Crop
             )
-            FilledTonalIconButton(
+            FilledIconButton(
                 onClick = onEditPhotoClick,
-                modifier = Modifier.align(Alignment.BottomEnd)
+                modifier = Modifier.offset(
+                    x = EditPhotoOffset,
+                    y = EditPhotoOffset
+                )
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_edit),
@@ -291,7 +297,8 @@ private fun BabyField(
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleLargeEmphasized
+                style = MaterialTheme.typography.titleLargeEmphasized,
+                maxLines = 3
             )
         }
         action?.invoke()
@@ -322,6 +329,7 @@ private fun EditNameDialog(
             OutlinedTextField(
                 state = nameState,
                 modifier = Modifier.focusRequester(focusRequester),
+                inputTransformation = InputTransformation.maxLength(MaxNameLength),
                 label = {
                     Text(stringResource(R.string.baby_name))
                 },
@@ -414,6 +422,13 @@ private fun EditBirthdayDialog(
         }
     }
 }
+
+// just a sane default to accommodate any reasonable name
+private const val MaxNameLength = 255
+
+private val BabyPhotoSize = 200.dp
+
+private val EditPhotoOffset = BabyPhotoSize / 2 / sqrt(2f)
 
 private class PastDates(private val today: LocalDate) : SelectableDates {
     override fun isSelectableDate(utcTimeMillis: Long): Boolean {
