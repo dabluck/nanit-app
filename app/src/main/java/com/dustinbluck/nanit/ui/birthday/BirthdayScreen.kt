@@ -320,7 +320,6 @@ private fun ShareButton(
         onClick = onClick,
         shapes = ButtonDefaults.shapes(),
         modifier = modifier.heightIn(NanitButtonDefaults.ContainerHeight),
-        elevation = null,
         colors = ButtonDefaults.filledTonalButtonColors(
             containerColor = colorResource(R.color.nanit_coral),
             contentColor = Color.White
