@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -222,6 +221,40 @@ private fun BirthdayDetails(
     uiState: BirthdayUiState.Loaded,
     modifier: Modifier = Modifier
 ) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .padding(bottom = 15.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            BirthdayTitle(uiState = uiState)
+        }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(15.dp)
+        ) {
+            BabyPhoto(
+                modeResources = modeResources,
+                photo = uiState.photo
+            )
+            Image(
+                painter = painterResource(R.drawable.nanit_logo),
+                contentDescription = stringResource(R.string.app_name)
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun BirthdayTitle(
+    uiState: BirthdayUiState.Loaded,
+    modifier: Modifier = Modifier
+) {
     val locale = Locale.current
     val age = uiState.age.value
     val ageUnitPlurals = when (uiState.age.unit) {
@@ -275,12 +308,6 @@ private fun BirthdayDetails(
             maxLines = 1,
             style = textStyle
         )
-        Spacer(modifier = Modifier.height(15.dp))
-        BabyPhoto(
-            modeResources = modeResources,
-            photo = uiState.photo
-        )
-        // TODO: NANIT LOGO
     }
 }
 
