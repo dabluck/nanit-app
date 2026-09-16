@@ -9,8 +9,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -45,6 +48,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
 import coil3.compose.rememberAsyncImagePainter
@@ -171,9 +175,8 @@ private fun BirthdayContent(
                             contentScale = ContentScale.FillWidth
                         )
                         BirthdayDetails(
-                            name = state.name,
-                            age = state.age.value,
-                            ageUnit = state.age.unit,
+                            modeResources = modeResources,
+                            uiState = state,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(innerPadding)
@@ -212,13 +215,13 @@ private fun BirthdayError(modifier: Modifier = Modifier) {
 
 @Composable
 private fun BirthdayDetails(
-    name: String,
-    age: Int,
-    ageUnit: AgeUnit,
+    modeResources: BirthdayModeResources,
+    uiState: BirthdayUiState.Loaded,
     modifier: Modifier = Modifier
 ) {
     val locale = Locale.current
-    val ageUnitPlurals = when (ageUnit) {
+    val age = uiState.age.value
+    val ageUnitPlurals = when (uiState.age.unit) {
         AgeUnit.MONTHS -> R.plurals.birthday_months_old
         AgeUnit.YEARS -> R.plurals.birthday_years_old
     }
@@ -235,7 +238,7 @@ private fun BirthdayDetails(
         Text(
             stringResource(
                 R.string.birthday_today_name_is,
-                name
+                uiState.name
             ).toUpperCase(locale),
             fontSize = 21.sp,
             overflow = TextOverflow.Ellipsis,
@@ -269,6 +272,13 @@ private fun BirthdayDetails(
             maxLines = 1,
             style = textStyle
         )
+        Spacer(modifier = Modifier.height(15.dp))
+        AsyncImage(
+            model = modeResources.defaultBaby,
+            contentDescription = null,
+            modifier = Modifier.size(200.dp)
+        )
+        // TODO: NANIT LOGO
     }
 }
 
