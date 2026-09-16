@@ -15,7 +15,8 @@
     <string name="edit_photo">Edit photo</string>
     <string name="choose_photo">Choose from gallery</string>
     <string name="take_photo">Take photo</string>
-    <string name="photo_save_error">Couldn\'t save photo</string>
+    <string name="remove_photo">Remove photo</string>
+    <string name="photo_save_error">Couldn\'t update photo</string>
     <string name="close">Close</string>
     <string name="birthday_today_name_is">Today %1$s is</string>
     <plurals name="birthday_months_old">

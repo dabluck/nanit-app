@@ -444,6 +444,77 @@ internal class MainViewModelTest {
     }
 
     @Test
+    fun clearPhotoRemovesPhoto() = testScope.runTest {
+        babyRepository.setPhoto(PHOTO::inputStream)
+        subject.editPhoto()
+        subject.clearPhoto()
+
+        val baby = babyRepository.baby.first()
+
+        assertThat(baby.photo).isNull()
+    }
+
+    @Test
+    fun clearPhotoClosesEdit() = testScope.runTest {
+        babyRepository.setPhoto(PHOTO::inputStream)
+        subject.editPhoto()
+        subject.clearPhoto()
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
+    }
+
+    @Test
+    fun clearPhotoRemovesPhotoWhenEditIsClosed() = testScope.runTest {
+        babyRepository.setPhoto(PHOTO::inputStream)
+        subject.clearPhoto()
+
+        val baby = babyRepository.baby.first()
+
+        assertThat(baby.photo).isNull()
+    }
+
+    @Test
+    fun clearPhotoIsIgnoredWhenNameEditIsOpen() = testScope.runTest {
+        babyRepository.setPhoto(PHOTO::inputStream)
+        subject.editName()
+        subject.clearPhoto()
+
+        val photo = babyRepository.baby.first().photo
+
+        assertThat(photo?.readBytes()).isEqualTo(PHOTO)
+    }
+
+    @Test
+    fun failedClearPhotoKeepsPhotoEditOpenWithError() = testScope.runTest {
+        subject = createSubject(factory.failingBabyRepository(babyRepository))
+        subject.editPhoto()
+        subject.clearPhoto()
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
+            EditState.Open(
+                field = EditField.PHOTO,
+                isSaving = false,
+                saveFailed = true
+            )
+        )
+    }
+
+    @Test
+    fun failedClearPhotoIsLogged() = testScope.runTest {
+        subject = createSubject(factory.failingBabyRepository(babyRepository))
+        subject.editPhoto()
+        subject.clearPhoto()
+
+        val entry = logger.entries.single()
+
+        assertThat(entry.level).isEqualTo(FakeLogger.Level.ERROR)
+    }
+
+    @Test
     fun failedSavePhotoKeepsPhotoEditOpenWithError() = testScope.runTest {
         subject = createSubject(factory.failingBabyRepository(babyRepository))
         subject.editPhoto()

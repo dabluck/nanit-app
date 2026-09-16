@@ -87,6 +87,20 @@ class PreferencesBabyRepository(
         }
     }
 
+    override suspend fun clearPhoto(): Boolean {
+        return photoMutex.withLock {
+            withContext(ioDispatcher) {
+                val cleared = editPreferences { preferences ->
+                    preferences.remove(PHOTO_PREFERENCE)
+                }
+                if (cleared) {
+                    deletePhotosExcept(null)
+                }
+                cleared
+            }
+        }
+    }
+
     private suspend fun editPreferences(transform: (MutablePreferences) -> Unit): Boolean {
         return try {
             dataStore.edit(transform)
@@ -103,7 +117,7 @@ class PreferencesBabyRepository(
         ).takeIf(File::exists)
     }
 
-    private fun deletePhotosExcept(photo: File) {
+    private fun deletePhotosExcept(photo: File?) {
         photoDirectory.listFiles()
             ?.filter { file ->
                 file != photo

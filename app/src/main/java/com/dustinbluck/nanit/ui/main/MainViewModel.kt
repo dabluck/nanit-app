@@ -95,6 +95,18 @@ class MainViewModel(
         }
     }
 
+    fun clearPhoto() {
+        if (editState.value == EditState.Closed) {
+            edit(EditField.PHOTO)
+        }
+        save(
+            field = EditField.PHOTO,
+            errorLogMessage = PHOTO_CLEAR_ERROR_LOG_MESSAGE
+        ) {
+            babyRepository.clearPhoto()
+        }
+    }
+
     private fun edit(field: EditField) {
         editState.value = EditState.Open(
             field = field,
@@ -147,5 +159,6 @@ class MainViewModel(
         private const val NAME_SAVE_ERROR_LOG_MESSAGE = "Failed to save baby name"
         private const val BIRTHDAY_SAVE_ERROR_LOG_MESSAGE = "Failed to save baby birthday"
         private const val PHOTO_SAVE_ERROR_LOG_MESSAGE = "Failed to save baby photo"
+        private const val PHOTO_CLEAR_ERROR_LOG_MESSAGE = "Failed to clear baby photo"
     }
 }

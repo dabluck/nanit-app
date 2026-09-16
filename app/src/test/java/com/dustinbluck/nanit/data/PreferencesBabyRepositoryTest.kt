@@ -110,6 +110,52 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
+    fun clearPhotoRemovesPhoto() = testScope.runTest {
+        subject.setPhoto(PHOTO::inputStream)
+        subject.clearPhoto()
+
+        val baby = subject.baby.first()
+
+        assertThat(baby.photo).isNull()
+    }
+
+    @Test
+    fun clearPhotoDeletesPhotoFile() = testScope.runTest {
+        subject.setPhoto(PHOTO::inputStream)
+        subject.clearPhoto()
+
+        val photos = factory.babyPhotoDirectory().list()
+
+        assertThat(photos).isEmpty()
+    }
+
+    @Test
+    fun clearPhotoKeepsOtherDetails() = testScope.runTest {
+        subject.setName(NAME)
+        subject.setPhoto(PHOTO::inputStream)
+        subject.clearPhoto()
+
+        val baby = subject.baby.first()
+
+        assertThat(baby).isEqualTo(
+            Baby(
+                name = NAME,
+                birthday = null,
+                photo = null
+            )
+        )
+    }
+
+    @Test
+    fun clearPhotoReturnsTrue() = testScope.runTest {
+        subject.setPhoto(PHOTO::inputStream)
+
+        val result = subject.clearPhoto()
+
+        assertThat(result).isTrue()
+    }
+
+    @Test
     fun setNameReturnsTrue() = testScope.runTest {
         val result = subject.setName(NAME)
 
@@ -250,6 +296,31 @@ internal class PreferencesBabyRepositoryTest {
         val photos = factory.babyPhotoDirectory().list()
 
         assertThat(photos).isEmpty()
+    }
+
+    @Test
+    fun clearPhotoReturnsFalseWhenPreferencesCannotBeWritten() = testScope.runTest {
+        val dataStore = factory.failingWritesBabyDataStore()
+        subject = factory.babyRepository(dataStore = dataStore)
+        subject.setPhoto(PHOTO::inputStream)
+        dataStore.failWrites()
+
+        val result = subject.clearPhoto()
+
+        assertThat(result).isFalse()
+    }
+
+    @Test
+    fun clearPhotoKeepsPhotoWhenPreferencesCannotBeWritten() = testScope.runTest {
+        val dataStore = factory.failingWritesBabyDataStore()
+        subject = factory.babyRepository(dataStore = dataStore)
+        subject.setPhoto(PHOTO::inputStream)
+        dataStore.failWrites()
+        subject.clearPhoto()
+
+        val photo = subject.baby.first().photo
+
+        assertThat(photo?.readBytes()).isEqualTo(PHOTO)
     }
 
     @Test

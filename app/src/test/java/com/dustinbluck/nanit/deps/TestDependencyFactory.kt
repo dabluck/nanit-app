@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import com.dustinbluck.nanit.data.BabyRepository
 import com.dustinbluck.nanit.data.FailingBabyRepository
+import com.dustinbluck.nanit.data.FailingWritesDataStore
 import com.dustinbluck.nanit.data.PausableBabyRepository
 import com.dustinbluck.nanit.data.PhotoManager
 import com.dustinbluck.nanit.data.PreferencesBabyRepository
@@ -70,6 +71,12 @@ internal class TestDependencyFactory(
                 BABY_DATA_STORE_FILE_NAME
             )
         )
+    }
+
+    fun failingWritesBabyDataStore(
+        delegate: DataStore<Preferences> = babyDataStore()
+    ): FailingWritesDataStore {
+        return FailingWritesDataStore(delegate)
     }
 
     fun babyRepository(

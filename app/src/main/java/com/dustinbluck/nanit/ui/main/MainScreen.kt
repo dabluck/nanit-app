@@ -183,6 +183,7 @@ fun MainScreen(
                                 EditPhotoSheet(
                                     editState = editState,
                                     canTakePhoto = canTakePhoto,
+                                    canRemovePhoto = state.baby.photo != null,
                                     onChoosePhotoClick = {
                                         choosePhotoLauncher.launch(
                                             PickVisualMediaRequest(
@@ -194,6 +195,7 @@ fun MainScreen(
                                         photoManager.prepareCameraPhoto()
                                         takePhotoLauncher.launch(photoManager.cameraPhotoUri)
                                     },
+                                    onRemovePhotoClick = viewModel::clearPhoto,
                                     onDismiss = viewModel::cancelEdit
                                 )
                             }
@@ -445,8 +447,10 @@ private fun EditBirthdayDialog(
 private fun EditPhotoSheet(
     editState: EditState.Open,
     canTakePhoto: Boolean,
+    canRemovePhoto: Boolean,
     onChoosePhotoClick: () -> Unit,
     onTakePhotoClick: () -> Unit,
+    onRemovePhotoClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden)
@@ -500,6 +504,31 @@ private fun EditPhotoSheet(
                     )
                     Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
                     Text(stringResource(R.string.take_photo))
+                }
+            }
+            if (canRemovePhoto) {
+                FilledTonalButton(
+                    onClick = {
+                        scope.launch {
+                            sheetState.hide()
+                            onDismiss()
+                            onRemovePhotoClick()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !editState.isSaving,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_delete),
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize)
+                    )
+                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                    Text(stringResource(R.string.remove_photo))
                 }
             }
         }

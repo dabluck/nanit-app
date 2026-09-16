@@ -29,6 +29,10 @@ internal class PausableBabyRepository(delegate: BabyRepository) : BabyRepository
         return awaitWrite()
     }
 
+    override suspend fun clearPhoto(): Boolean {
+        return awaitWrite()
+    }
+
     private suspend fun awaitWrite(): Boolean {
         writeCount++
         return writeResult.await()
