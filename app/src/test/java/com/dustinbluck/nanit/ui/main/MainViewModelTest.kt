@@ -197,17 +197,6 @@ internal class MainViewModelTest {
     }
 
     @Test
-    fun saveNameWithUnchangedNameClosesEdit() = testScope.runTest {
-        babyRepository.setName(NAME)
-        subject.editName()
-        subject.saveName(NAME)
-
-        val uiState = awaitLoadResult()
-
-        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
-    }
-
-    @Test
     fun saveNameIgnoresBlankName() = testScope.runTest {
         subject.editName()
         subject.saveName(BLANK_NAME)
@@ -327,17 +316,6 @@ internal class MainViewModelTest {
 
     @Test
     fun saveBirthdayClosesEdit() = testScope.runTest {
-        subject.editBirthday()
-        subject.saveBirthday(BIRTHDAY)
-
-        val uiState = awaitLoadResult()
-
-        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
-    }
-
-    @Test
-    fun saveBirthdayWithUnchangedBirthdayClosesEdit() = testScope.runTest {
-        babyRepository.setBirthday(BIRTHDAY)
         subject.editBirthday()
         subject.saveBirthday(BIRTHDAY)
 

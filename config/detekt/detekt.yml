@@ -24,6 +24,3 @@ style:
     active: false
   WildcardImport:
     active: false
-  UnusedPrivateFunction:
-    ignoreAnnotated:
-      - 'Preview'

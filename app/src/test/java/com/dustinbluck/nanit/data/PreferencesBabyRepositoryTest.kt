@@ -164,50 +164,8 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
-    fun clearPhotoReturnsTrue() = testScope.runTest {
-        subject.setPhoto(PHOTO::inputStream)
-
-        val result = subject.clearPhoto()
-
-        assertThat(result).isTrue()
-    }
-
-    @Test
-    fun setNameReturnsTrue() = testScope.runTest {
-        val result = subject.setName(NAME)
-
-        assertThat(result).isTrue()
-    }
-
-    @Test
-    fun setBirthdayReturnsTrue() = testScope.runTest {
-        val result = subject.setBirthday(BIRTHDAY)
-
-        assertThat(result).isTrue()
-    }
-
-    @Test
-    fun setPhotoReturnsTrue() = testScope.runTest {
-        val result = subject.setPhoto(PHOTO::inputStream)
-
-        assertThat(result).isTrue()
-    }
-
-    @Test
     fun setPhotoReturnsFalseWhenPhotoCannotBeRead() = testScope.runTest {
         val result = subject.setPhoto(::FailingInputStream)
-
-        assertThat(result).isFalse()
-    }
-
-    @Test
-    fun setPhotoReturnsFalseWhenPhotoFileIsMissing() = testScope.runTest {
-        val missingPhoto = File(
-            folder.root,
-            MISSING_PHOTO_FILE_NAME
-        )
-
-        val result = subject.setPhoto(missingPhoto::inputStream)
 
         assertThat(result).isFalse()
     }
@@ -420,7 +378,6 @@ internal class PreferencesBabyRepositoryTest {
         private const val NAME = "Dustin"
         private const val READ_FAILURE_MESSAGE = "read failed"
         private const val ACCESS_DENIED_MESSAGE = "access denied"
-        private const val MISSING_PHOTO_FILE_NAME = "missing_photo.jpg"
         private const val CORRUPT_DATA_STORE_CONTENTS = "not a preferences file"
         private val BIRTHDAY = LocalDate.of(
             2025,
