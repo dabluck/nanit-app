@@ -54,9 +54,6 @@ import coil3.size.Precision
 import coil3.size.Size
 import com.dustinbluck.nanit.R
 import com.dustinbluck.nanit.deps.NanitDeps
-import com.dustinbluck.nanit.ui.theme.ElephantBackground
-import com.dustinbluck.nanit.ui.theme.FoxBackground
-import com.dustinbluck.nanit.ui.theme.PelicanBackground
 
 @Composable
 fun BirthdayScreen(
@@ -71,6 +68,7 @@ fun BirthdayScreen(
     }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val modeResources = BirthdayModeResources.of(mode)
     val context = LocalPlatformContext.current
     val displayWidth = LocalResources.current.displayMetrics.widthPixels
     val backgroundRequest = remember(
@@ -79,7 +77,7 @@ fun BirthdayScreen(
     ) {
         // exact size since our images are pretty large and we only want to use the memory we need
         ImageRequest.Builder(context)
-            .data(backgroundDrawableOf(mode))
+            .data(modeResources.background)
             .size(
                 Size(
                     width = Dimension(displayWidth),
@@ -102,34 +100,22 @@ fun BirthdayScreen(
         uiState
     }
     BirthdayContent(
-        mode = mode,
+        modeResources = modeResources,
         uiState = contentState,
         backgroundPainter = backgroundPainter,
         onCloseClick = onCloseClick
     )
 }
 
-private fun backgroundDrawableOf(mode: BirthdayMode): Int {
-    return when (mode) {
-        BirthdayMode.FOX -> R.drawable.bg_fox
-        BirthdayMode.ELEPHANT -> R.drawable.bg_elephant
-        BirthdayMode.PELICAN -> R.drawable.bg_pelican
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BirthdayContent(
-    mode: BirthdayMode,
+    modeResources: BirthdayModeResources,
     uiState: BirthdayUiState,
     backgroundPainter: Painter,
     onCloseClick: () -> Unit
 ) {
-    val backgroundColor = when (mode) {
-        BirthdayMode.FOX -> FoxBackground
-        BirthdayMode.ELEPHANT -> ElephantBackground
-        BirthdayMode.PELICAN -> PelicanBackground
-    }
+    val backgroundColor = colorResource(modeResources.backgroundColor)
     Scaffold(
         topBar = {
             TopAppBar(
