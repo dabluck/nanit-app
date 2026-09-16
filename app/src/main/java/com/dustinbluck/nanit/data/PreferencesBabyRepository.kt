@@ -56,7 +56,7 @@ class PreferencesBabyRepository(
     }
 
     override suspend fun setPhoto(openPhoto: () -> InputStream): Boolean {
-        // this does several operations that can take a long time so in theories coroutines could
+        // this does several operations that can take a long time so in theory coroutines could
         // interleave without the mutex
         return photoMutex.withLock {
             withContext(ioDispatcher) {

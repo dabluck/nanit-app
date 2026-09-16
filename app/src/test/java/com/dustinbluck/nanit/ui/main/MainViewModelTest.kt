@@ -408,8 +408,7 @@ internal class MainViewModelTest {
     }
 
     @Test
-    fun savePhotoStoresPhotoWhenNameEditIsOpen() = testScope.runTest {
-        subject.editName()
+    fun savePhotoStoresPhoto() = testScope.runTest {
         subject.savePhoto(PHOTO::inputStream)
 
         val baby = babyRepository.baby.first()
@@ -418,9 +417,8 @@ internal class MainViewModelTest {
     }
 
     @Test
-    fun clearPhotoRemovesPhotoWhenNameEditIsOpen() = testScope.runTest {
+    fun clearPhotoRemovesPhoto() = testScope.runTest {
         babyRepository.setPhoto(PHOTO::inputStream)
-        subject.editName()
         subject.clearPhoto()
 
         val photo = babyRepository.baby.first().photo
@@ -432,17 +430,17 @@ internal class MainViewModelTest {
     fun finishedSaveKeepsNewlyOpenedEditOpen() = testScope.runTest {
         val repository = factory.pausableBabyRepository(babyRepository)
         subject = createSubject(repository)
-        subject.editPhoto()
-        subject.savePhoto(PHOTO::inputStream)
-        subject.cancelEdit()
         subject.editName()
+        subject.saveName(NAME)
+        subject.cancelEdit()
+        subject.editBirthday()
         repository.resumeWrites(success = true)
 
         val uiState = awaitLoadResult()
 
         assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
             EditState.Open(
-                field = EditField.NAME,
+                field = EditField.BIRTHDAY,
                 isSaving = false,
                 saveFailed = false
             )
@@ -461,6 +459,24 @@ internal class MainViewModelTest {
         val uiState = awaitLoadResult()
 
         assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(EditState.Closed)
+    }
+
+    @Test
+    fun editIsSavingWhileNameIsWritten() = testScope.runTest {
+        val repository = factory.pausableBabyRepository(babyRepository)
+        subject = createSubject(repository)
+        subject.editName()
+        subject.saveName(NAME)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? MainUiState.Loaded)?.editState).isEqualTo(
+            EditState.Open(
+                field = EditField.NAME,
+                isSaving = true,
+                saveFailed = false
+            )
+        )
     }
 
     @Test

@@ -81,6 +81,23 @@ internal class PreferencesBabyRepositoryTest {
     }
 
     @Test
+    fun storedDetailsSurviveRestart() = testScope.runTest {
+        subject.setName(NAME)
+        subject.setBirthday(BIRTHDAY)
+        val restartedRepository = factory.restartedBabyRepository()
+
+        val baby = restartedRepository.baby.first()
+
+        assertThat(baby).isEqualTo(
+            Baby(
+                name = NAME,
+                birthday = BIRTHDAY,
+                photo = null
+            )
+        )
+    }
+
+    @Test
     fun setPhotoStoresPhotoBytes() = testScope.runTest {
         subject.setPhoto(PHOTO::inputStream)
 

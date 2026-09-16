@@ -107,25 +107,19 @@ fun MainScreen(
         }
     ) { innerPadding ->
         when (val state = uiState) {
-            MainUiState.Loading -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                LoadingIndicator()
+            MainUiState.Loading -> {
+                MainLoading(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                )
             }
 
-            MainUiState.Error -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.baby_load_error),
-                    style = MaterialTheme.typography.bodyLarge
+            MainUiState.Error -> {
+                MainError(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
                 )
             }
 
@@ -158,7 +152,6 @@ fun MainScreen(
                             onSave = viewModel::saveBirthday,
                             onDismiss = viewModel::cancelEdit
                         )
-
                     }
                 }
                 val photoEdit = photoEditState
@@ -173,6 +166,30 @@ fun MainScreen(
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun MainLoading(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        LoadingIndicator()
+    }
+}
+
+@Composable
+private fun MainError(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = stringResource(R.string.baby_load_error),
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }
 

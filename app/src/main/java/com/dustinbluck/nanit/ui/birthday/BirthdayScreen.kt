@@ -141,7 +141,9 @@ fun BirthdayScreen(
     }
     val graphicsLayer = rememberGraphicsLayer()
     val captureScope = rememberCoroutineScope()
-    val captureAlpha = remember { Animatable(1f) }
+    val captureAlpha = remember {
+        Animatable(1f)
+    }
     CompositionLocalProvider(LocalCaptureAlpha provides captureAlpha.value) {
         Box(
             modifier = Modifier.drawWithContent {
