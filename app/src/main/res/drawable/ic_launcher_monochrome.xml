@@ -4,34 +4,34 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group
-        android:scaleX="0.3113"
-        android:scaleY="0.3113"
-        android:translateX="23"
-        android:translateY="23">
+        android:scaleX="0.2912"
+        android:scaleY="0.2912"
+        android:translateX="25"
+        android:translateY="25">
         <path
             android:fillType="evenOdd"
             android:pathData="M99.1301 152.522C128.617 152.522 152.521 128.619 152.521 99.1318C152.521 69.6448 128.617 45.7399 99.1301 45.7399C69.6431 45.7399 45.74 69.6448 45.74 99.1318C45.74 128.619 69.6431 152.522 99.1301 152.522Z"
             android:strokeWidth="7"
-            android:strokeColor="@color/fox_accent_light" />
+            android:strokeColor="#FFFFFF" />
         <path
             android:pathData="M64.574 100.039C64.574 100.039 67.8708 97.7578 74.2816 97.7578C80.6933 97.7578 83.9883 100.039 83.9883 100.039"
             android:strokeWidth="7"
-            android:strokeColor="@color/fox_accent_light"
+            android:strokeColor="#FFFFFF"
             android:strokeLineCap="round" />
         <path
             android:pathData="M110.139 121.076C110.139 121.076 105.427 125.379 99.0163 125.379C92.6047 125.379 87.8926 121.076 87.8926 121.076"
             android:strokeWidth="7"
-            android:strokeColor="@color/fox_accent_light"
+            android:strokeColor="#FFFFFF"
             android:strokeLineCap="round" />
         <path
             android:pathData="M113.005 100.039C113.005 100.039 116.301 97.7578 122.712 97.7578C129.124 97.7578 132.419 100.039 132.419 100.039"
             android:strokeWidth="7"
-            android:strokeColor="@color/fox_accent_light"
+            android:strokeColor="#FFFFFF"
             android:strokeLineCap="round" />
         <path
             android:pathData="M97.8513 47.5336C97.8513 47.5336 90.7867 56.0879 94.2101 60.8816C97.6343 65.6753 106.345 66.948 109.985 64.5211"
             android:strokeWidth="7"
-            android:strokeColor="@color/fox_accent_light"
+            android:strokeColor="#FFFFFF"
             android:strokeLineCap="round" />
     </group>
 </vector>
