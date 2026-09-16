@@ -1,5 +1,7 @@
 package com.dustinbluck.nanit.ui.birthday
 
+import app.cash.turbine.ReceiveTurbine
+import app.cash.turbine.test
 import com.dustinbluck.nanit.data.PreferencesBabyRepository
 import com.dustinbluck.nanit.deps.TestDependencyFactory
 import com.dustinbluck.nanit.logging.FakeLogger
@@ -17,6 +19,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
 import java.io.IOException
 import java.time.LocalDate
 
@@ -154,9 +157,68 @@ internal class BirthdayViewModelTest {
                 age = Age(
                     value = 5,
                     unit = AgeUnit.MONTHS
-                )
+                ),
+                photo = null
             )
         )
+    }
+
+    @Test
+    fun uiStateContainsPhotoBytes() = testScope.runTest {
+        babyRepository.setName(NAME)
+        babyRepository.setBirthday(BIRTHDAY)
+        babyRepository.setPhoto(PHOTO::inputStream)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? BirthdayUiState.Loaded)?.photo?.readBytes()).isEqualTo(PHOTO)
+    }
+
+    @Test
+    fun photoIsNullWhenPhotoIsNotSet() = testScope.runTest {
+        babyRepository.setName(NAME)
+        babyRepository.setBirthday(BIRTHDAY)
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? BirthdayUiState.Loaded)?.photo).isNull()
+    }
+
+    @Test
+    fun photoIsNullWhenPhotoFileIsMissing() = testScope.runTest {
+        babyRepository.setName(NAME)
+        babyRepository.setBirthday(BIRTHDAY)
+        babyRepository.setPhoto(PHOTO::inputStream)
+        factory.babyPhotoDirectory().deleteRecursively()
+
+        val uiState = awaitLoadResult()
+
+        assertThat((uiState as? BirthdayUiState.Loaded)?.photo).isNull()
+    }
+
+    @Test
+    fun photoUpdatesWhenPhotoChanges() = testScope.runTest {
+        babyRepository.setName(NAME)
+        babyRepository.setBirthday(BIRTHDAY)
+        babyRepository.setPhoto(PHOTO::inputStream)
+
+        var photo: File? = null
+        subject.uiState.test {
+            awaitLoaded()
+            babyRepository.setPhoto(OTHER_PHOTO::inputStream)
+            photo = awaitLoaded().photo
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertThat(photo?.readBytes()).isEqualTo(OTHER_PHOTO)
+    }
+
+    private suspend fun ReceiveTurbine<BirthdayUiState>.awaitLoaded(): BirthdayUiState.Loaded {
+        var uiState = awaitItem()
+        while (uiState !is BirthdayUiState.Loaded) {
+            uiState = awaitItem()
+        }
+        return uiState
     }
 
     private suspend fun awaitLoadResult(): BirthdayUiState {
@@ -182,6 +244,16 @@ internal class BirthdayViewModelTest {
             2025,
             8,
             21
+        )
+        private val PHOTO = byteArrayOf(
+            1,
+            2,
+            3
+        )
+        private val OTHER_PHOTO = byteArrayOf(
+            4,
+            5,
+            6
         )
     }
 }

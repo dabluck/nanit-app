@@ -7,6 +7,7 @@ import com.dustinbluck.nanit.R
 data class BirthdayModeResources(
     @param:DrawableRes val background: Int,
     @param:DrawableRes val defaultBaby: Int,
+    @param:DrawableRes val photoRing: Int,
     @param:DrawableRes val addPhoto: Int,
     @param:ColorRes val backgroundColor: Int
 ) {
@@ -16,6 +17,7 @@ data class BirthdayModeResources(
                 BirthdayMode.FOX -> BirthdayModeResources(
                     background = R.drawable.bg_fox,
                     defaultBaby = R.drawable.default_baby_fox,
+                    photoRing = R.drawable.photo_ring_fox,
                     addPhoto = R.drawable.ic_add_photo_fox,
                     backgroundColor = R.color.fox_background
                 )
@@ -23,6 +25,7 @@ data class BirthdayModeResources(
                 BirthdayMode.ELEPHANT -> BirthdayModeResources(
                     background = R.drawable.bg_elephant,
                     defaultBaby = R.drawable.default_baby_elephant,
+                    photoRing = R.drawable.photo_ring_elephant,
                     addPhoto = R.drawable.ic_add_photo_elephant,
                     backgroundColor = R.color.elephant_background
                 )
@@ -30,6 +33,7 @@ data class BirthdayModeResources(
                 BirthdayMode.PELICAN -> BirthdayModeResources(
                     background = R.drawable.bg_pelican,
                     defaultBaby = R.drawable.default_baby_pelican,
+                    photoRing = R.drawable.photo_ring_pelican,
                     addPhoto = R.drawable.ic_add_photo_pelican,
                     backgroundColor = R.color.pelican_background
                 )

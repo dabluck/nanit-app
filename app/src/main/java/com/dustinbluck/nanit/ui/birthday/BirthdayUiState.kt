@@ -1,5 +1,7 @@
 package com.dustinbluck.nanit.ui.birthday
 
+import java.io.File
+
 sealed interface BirthdayUiState {
     data object Loading : BirthdayUiState
 
@@ -7,6 +9,7 @@ sealed interface BirthdayUiState {
 
     data class Loaded(
         val name: String,
-        val age: Age
+        val age: Age,
+        val photo: File?
     ) : BirthdayUiState
 }

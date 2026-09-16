@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalResources
@@ -58,6 +60,7 @@ import coil3.size.Precision
 import coil3.size.Size
 import com.dustinbluck.nanit.R
 import com.dustinbluck.nanit.deps.NanitDeps
+import java.io.File
 
 @Composable
 fun BirthdayScreen(
@@ -273,12 +276,44 @@ private fun BirthdayDetails(
             style = textStyle
         )
         Spacer(modifier = Modifier.height(15.dp))
-        AsyncImage(
-            model = modeResources.defaultBaby,
-            contentDescription = null,
-            modifier = Modifier.size(200.dp)
+        BabyPhoto(
+            modeResources = modeResources,
+            photo = uiState.photo
         )
         // TODO: NANIT LOGO
+    }
+}
+
+@Composable
+private fun BabyPhoto(
+    modeResources: BirthdayModeResources,
+    photo: File?,
+    modifier: Modifier = Modifier
+) {
+    val defaultBaby = painterResource(modeResources.defaultBaby)
+    Box(
+        modifier = modifier.size(207.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        AsyncImage(
+            model = photo,
+            contentDescription = if (photo == null) {
+                null
+            } else {
+                stringResource(R.string.baby_photo)
+            },
+            modifier = Modifier
+                .size(200.dp)
+                .clip(CircleShape),
+            fallback = defaultBaby,
+            error = defaultBaby,
+            contentScale = ContentScale.Crop
+        )
+        Image(
+            painter = painterResource(modeResources.photoRing),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 

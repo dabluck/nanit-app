@@ -58,7 +58,8 @@ class BirthdayViewModel(
         }
         return BirthdayUiState.Loaded(
             name = name,
-            age = age
+            age = age,
+            photo = baby.photo
         )
     }
 
