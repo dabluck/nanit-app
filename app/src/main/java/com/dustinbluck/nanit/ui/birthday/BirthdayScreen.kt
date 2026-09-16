@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -231,7 +232,13 @@ private fun BirthdayDetails(
                 .padding(bottom = 15.dp),
             contentAlignment = Alignment.Center
         ) {
-            BirthdayTitle(uiState = uiState)
+            BirthdayTitle(
+                uiState = uiState,
+                modifier = Modifier.wrapContentHeight(
+                    align = centerUntilOverflowThenPinToBottom(),
+                    unbounded = true
+                )
+            )
         }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -247,6 +254,17 @@ private fun BirthdayDetails(
             )
         }
         Spacer(modifier = Modifier.weight(1f))
+    }
+}
+
+private fun centerUntilOverflowThenPinToBottom(): Alignment.Vertical {
+    return Alignment.Vertical { size, space ->
+        val centered = (space - size) / 2
+        val bottomPinned = space - size
+        minOf(
+            centered,
+            bottomPinned
+        )
     }
 }
 
