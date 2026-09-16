@@ -7,6 +7,5 @@
 .externalNativeBuild
 .cxx
 local.properties
-/CLAUDE.md
 app/build
 .kotlin/**
